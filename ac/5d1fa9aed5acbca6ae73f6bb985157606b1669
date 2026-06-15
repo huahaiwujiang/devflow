@@ -1,0 +1,14 @@
+huahai-workflow-gf/SKILL.md
+  h_20193a38825318 62-63,100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "ac5d1fa9aed5acbca6ae73f6bb985157606b1669",
+  "prompts": {},
+  "humans": {
+    "h_20193a38825318": {
+      "author": "huahai"
+    }
+  }
+}
