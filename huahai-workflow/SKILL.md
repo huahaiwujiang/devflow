@@ -1,175 +1,160 @@
 ---
 name: huahai-workflow
-description: 开发工作流——从需求追问到代码发布。当用户提出开发任务、新功能、要做某个特性、/huahai-workflow 时触发。即使用户想跳过步骤直接写代码，也应先走此流程确保方向正确。
+description: 开发工作流——从需求追问到代码发布，启动时自动检查依赖。当用户提出开发任务、新功能、要做某个特性、检查依赖、setup、环境检测、/huahai-workflow 时触发。即使用户想跳过步骤直接写代码，也应先走此流程确保方向正确。
 ---
 
 # 开发工作流
 
-> grill-with-docs 管追问，brainstorming 管设计，writing-plans 管拆分，内置命令管审查。
-
-**平台依赖**：本工作流基于 Claude Code 的 Skill 体系构建（grill-with-docs、superpowers、code-review、security-review 均为 Claude 生态技能）。其他 AI 工具需自行适配 Skill 调用机制。
+> grilling + domain-modeling 管追问，to-spec 模板管设计，to-tickets 模板管拆分，tdd 管编码。
 
 ## 🧭 启动决策树（读到本 skill 后第一件事）
 
+**前置：轻量依赖检查（<1s）**
+
+```bash
+ls ~/.claude/plugins/cache/mattpocock/mattpocock-skills/ 2>/dev/null
+```
+- ❌ 目录不存在或无版本子目录 → 提示安装 `claude plugin install mattpocock-skills@mattpocock`，安装后 `/reload-skills`，重新触发工作流
+- ✅ 就绪 → 继续
+
 ```
 读 todolist.md（始终在项目根目录）
-├─ 不存在 ──→ 1. 问用户：「grill-with-docs 和 superpowers 的文档输出到哪个目录？」（默认 docs/）
+├─ 不存在 ──→ 1. 问用户：「设计文档输出到哪个目录？」（默认 docs/grillme/）
 │             2. 创建 todolist.md，写入顶部元信息（doc_root + 阶段: 步骤1）
 │             3. 从步骤1开始
 ├─ 存在 + 用户说"从头开始"/"重新来"/"新任务" ──→ 清空 todolist.md 全部内容，重新走流程
 ├─ 存在 + 有未勾选任务 ──→ 跳到对应步骤继续
 └─ 存在 + 全部已勾选
    ├─ 已发布（git log origin/main..HEAD 为空，无未推送提交）──→ 删除 todolist.md，问"新功能？"→ 重新走启动流程
-   └─ 未发布 ──→ 提示用户先执行步骤6发布 + 步骤7归档
+   └─ 未发布 ──→ 提示用户先执行步骤5发布 + 步骤6归档
 ```
 
 ## 工作流链路
 
-每一步都有明确的 **输入 → Skill → 自然产出 → 完成标志**。Skill 按其自身流程运行，工作流只做编排，不截断输出。
+每一步都有明确的 **输入 → Skill → 自然产出 → 完成标志**。Skill 按其自身流程运行，工作流只做编排，不截断输出格式。
 
 todolist.md 在启动时创建（仅含 doc_root + 阶段），随步骤推进逐步填充元信息和任务清单。
 
 ```
-步骤1: 追问（WHAT — 用户要什么）
-  🔴 强制: Skill("grill-with-docs")
+步骤1: 追问（WHAT — 用户要什么，领域模型是什么）
+  执行: Skill("mattpocock-skills:grilling") 为主驱动追问（decision tree，一次一问，每问附推荐答案）；Skill("mattpocock-skills:domain-modeling") 在追问过程中伴随记录术语表/ADR
+  说明: grill-with-docs 有 disable-model-invocation，但其内容即 "grilling + domain-modeling"，直接调用底层 skill 等价
   输入: 用户提供的需求文档/描述
-  自然产出:
-    - <doc_root>/grillme/NNNN-<title>-CONTEXT.md（术语表）
-    - <doc_root>/grillme/adr/NNNN-<title>.md（架构决策记录）
-  规则: 以项目文档为主理解业务。文档不足时可读代码补充理解，但追问输出不应包含技术实现细节（API 路径、表结构、技术栈选择）
-  完成: grill-with-docs 流程结束，更新 todolist.md 阶段为「步骤2」
+  产出:
+    - 项目根目录/CONTEXT.md（领域术语表，项目级 ubiquitous language，跨任务累积。若已存在则追加/更新，不覆盖）
+    - <doc_root>/adr/NNNN-<slug>.md（架构决策记录，仅在满足三条件时创建：难逆转、缺上下文会惊讶、真实权衡结果）
+  规则:
+    - 关注业务 WHAT，不涉及技术 HOW（API 路径、表结构、技术栈选型）
+    - 文档不足时可读代码补充理解，但追问输出为纯业务视角
+  兜底: 若上述 Skill 不可用 → 引导用户运行 `claude plugin install mattpocock-skills@mattpocock`
+  完成: grilling + domain-modeling 流程结束 → 总结领域模型关键点（核心术语、边界上下文），用户确认理解无误后，更新 todolist.md：
+    1. 写入 `<!-- context: CONTEXT.md -->`（根目录，如果创建/更新了）
+    2. 更新阶段为「步骤2」
 
 步骤2: 设计（HOW — 怎么实现）
-  🔴 强制: Skill("superpowers:brainstorming")
-  输入: 步骤1的产出文档 + 项目现有代码 + PRD 文档
-  自然产出: <doc_root>/superpowers/specs/YYYY-MM-DD-<name>-design.md
-  完成: 🔴 CHECKPOINT — 用户确认方案后，更新 todolist.md：
+  执行: Skill("mattpocock-skills:to-spec")
+  失败执行: 直接 Read ~/.claude/plugins/cache/mattpocock/mattpocock-skills/<最新版本>/skills/engineering/to-spec/SKILL.md，遵循其 process（explore → seams 确认 → 按 spec-template 写 spec）
+  输入: 步骤1的 CONTEXT.md（根目录）+ adr/ + 项目现有代码
+  偏离: 跳过「publish to issue tracker」等 tracker 相关步骤 —— spec 写入 <doc_root>/specs/YYYY-MM-DD-<feature>.md 即可
+  完成: 🔴 CHECKPOINT — 展示设计文档，等待用户明确确认后，更新 todolist.md：
     1. 写入 `<!-- spec: <设计文档路径> -->`
     2. 更新阶段为「步骤3」
 
-步骤3: 拆分
-  🔴 强制: Skill("superpowers:writing-plans")
-  输入: 读 todolist.md 元信息 `<!-- spec: -->` 获取设计文档路径
-  自然产出: <doc_root>/superpowers/plans/YYYY-MM-DD-<name>.md（内含 checkbox 任务清单）
-  完成: 🔴 CHECKPOINT — 计划文档已写入，更新 todolist.md：
-    1. 写入 `<!-- plan: <计划文档路径> -->`
-    2. 从计划文档中提取任务摘要，写入 `- [ ] 任务描述`
+步骤3: 拆分（切成垂直切片）
+  执行: Skill("mattpocock-skills:to-tickets")
+  失败执行: 直接 Read ~/.claude/plugins/cache/mattpocock/mattpocock-skills/<最新版本>/skills/engineering/to-tickets/SKILL.md，遵循其 process（gather → explore → draft vertical slices → quiz user）
+  输入: todolist.md 元信息 `<!-- spec: -->` 指向的设计文档 + 代码库
+  偏离: 跳过「publish tickets to tracker」——用其 local-ticket-template，票写入 <doc_root>/tickets/<NN>-<slug>.md
+  完成: 🔴 CHECKPOINT — 展示票列表（含阻塞关系），用户确认拆分粒度后，更新 todolist.md：
+    1. 写入 `<!-- tickets_root: <doc_root>/tickets/ -->`
+    2. 从票文件中提取验收条件摘要，写入 `- [ ] <票标题>`
     3. 更新阶段为「步骤4」
 
-步骤4: 编码
-  🔴 强制: Skill("superpowers:test-driven-development")
-  输入: todolist.md（任务清单）+ 元信息 `<!-- plan: -->` 指向的计划文档
-  规则: 🚫 禁止 commit。只写代码和测试，提交统一由步骤6执行
-  完成: todolist.md 所有任务 ✅，代码类任务测试全绿，变更待提交
+步骤4: 编码（逐票实现）
+  执行: Skill("mattpocock-skills:tdd")
+  输入: todolist.md 任务清单 + <doc_root>/tickets/ 中的票文件
+  每个票的流程:
+    1. 确认测试缝（seams）— 与用户确认在哪个公共接口层测试
+    2. Skill("mattpocock-skills:tdd") — 先写失败测试 → 最小实现让测试通过 → 循环
+    3. 单票实现完成后，勾选 todolist.md 中对应任务
+  规则:
+    - 🚫 禁止 commit。只写代码和测试，提交统一由步骤5执行
+    - 测试只验证外部行为，不测试实现细节
+    - 工作顺序遵循票依赖图（blocked-by 关系），先做无依赖票
+    - 频繁类型检查，单文件测试循环，全量测试最后过一遍
+  说明: 不用 Skill("implement")——implement 有 disable-model-invocation + 内嵌 commit/review，改调底层 tdd 原语
+  注意: tdd 启动时会读 CONTEXT.md（步骤1产出，在项目根目录）对齐术语与接口词汇
+  完成: 所有票 ✅，测试全绿，票依赖图所有边已满足，变更待提交。提示用户「如需代码审查可手动运行 /code-review」（可选，不阻塞发布）
 
-步骤5: 审查
-  🔴 强制（两步都要跑，不可跳过）:
-    1. Skill("code-review")
-    2. Skill("security-review")
-  输入: 编码阶段的代码变更
-  完成: 🔴 CHECKPOINT — 检查清单全通过
-
-步骤6: 发布
-  🔴 强制: Skill("huahai-workflow-gf")
-  输入: 步骤5审查通过的代码变更（步骤4积累的全部未提交变更）
+步骤5: 发布（git flow）
+  执行: Skill("huahai-workflow-gf")
+  输入: 步骤4积累的全部未提交变更
   完成: 代码已提交 + 推送
 
-步骤7: 归档
-  输入: todolist.md 元信息 `<!-- spec: -->` 和 `<!-- plan: -->` 指向的文档
+步骤6: 归档
+  输入: todolist.md 元信息 `<!-- spec: -->`、`<!-- tickets_root: -->`、`<!-- context: -->`
   动作:
-    1. 将 spec + plan 文档移到 <doc_root>/superpowers/archive/YYYY-MM-DD-<name>/
-    2. 删除 todolist.md
-  完成: 设计产物已归档，临时文件已清理
+    1. 创建 <doc_root>/archive/YYYY-MM-DD-<feature>/
+    2. 将 adr/、spec 文档、tickets 目录全部移入归档目录
+    3. CONTEXT.md 留在项目根目录（跨任务累积，不归档）
+    4. 删除 todolist.md
+  完成: 设计产物已归档，临时文件已清理，CONTEXT.md 保留供下次任务复用
 ```
-
-### 每一步完成后
-
-1. 勾选 `todolist.md` 中对应任务（如有）
-2. 确认完成标志已达成
-3. 进入下一步
-
-## 🔴 CHECKPOINT 门禁
-
-### 设计→拆分：人类确认（铁律）
-设计文档写入后，向用户展示并等待明确确认。未确认 = 🛑 STOP。
-
-### 拆分→编码：计划确认
-计划文档写入后，确认任务清单无遗漏。
-
-### 审查→发布：提交前检查清单
-- [ ] TDD 测试全部通过
-- [ ] Skill("code-review") 通过，无 CRITICAL 问题
-- [ ] Skill("security-review") 通过（涉及 auth/finance/system 时强制）
-- [ ] 计划文档中对应任务全部 ✅
-- [ ] <doc_root>/superpowers/specs/ 和 <doc_root>/superpowers/plans/ 已就绪
-
-全部通过 → 提交。任一未通过 → 🛑 STOP，先补。
 
 ## todolist.md 规约
 
 - **位置**：始终在项目根目录（不在 <doc_root>/ 下）
-- **定位**：进度指针，不重复计划内容。真正的任务细节在计划文档中
+- **定位**：进度指针，不重复计划内容。真正的任务细节在票文件中
 - **生命周期**：
 
   | 阶段 | 操作 | 内容 |
   |------|------|------|
   | 启动 | 创建 | `<!-- doc_root: -->` + `<!-- 阶段: 步骤1 -->` |
-  | 步骤1 完成 | 更新 | 阶段 → 步骤2 |
+  | 步骤1 完成 | 更新 | `<!-- context: CONTEXT.md -->` (根目录，如果创建/更新了) + 阶段 → 步骤2 |
   | 步骤2 完成 | 更新 | `<!-- spec: -->` + 阶段 → 步骤3 |
-  | 步骤3 完成 | 更新 | `<!-- plan: -->` + 任务清单 + 阶段 → 步骤4 |
-  | 步骤4-6 | 勾选 | 逐个 `[x]` 完成任务 |
-  | 步骤7 完成 | 删除 | 归档后删除 todolist.md |
+  | 步骤3 完成 | 更新 | `<!-- tickets_root: -->` + 票清单 + 阶段 → 步骤4 |
+  | 步骤4 | 勾选 | 逐个 `[x]` 完成票 |
+  | 步骤5 | 发布 | gf 提交+推送 |
+  | 步骤6 完成 | 删除 | 归档后删除 todolist.md（CONTEXT.md 留根目录保留） |
 
 - **顶部元信息**：
   ```
   <!-- doc_root: <绝对或相对路径> -->
+  <!-- context: CONTEXT.md -->
   <!-- spec: <设计文档路径> -->
-  <!-- plan: <计划文档路径> -->
+  <!-- tickets_root: <票目录路径> -->
   <!-- 阶段: <当前步骤> -->
   ```
-- **格式**：每行 `- [ ] 任务描述`（步骤3从计划文档中提取摘要），已完成改为 `- [x]`
+- **格式**：每行 `- [ ] 任务描述`（步骤3从票文件中提取摘要），已完成改为 `- [x]`
 - **gitignore**：应加入 `.gitignore`
 - **损坏处理**：格式无法解析时，按以下优先级推断当前进度：
-  1. `superpowers/plans/` 有最新文件 → 步骤4+
-  2. `superpowers/specs/` 有最新文件 → 步骤3+
-  3. `grillme/` 有最新文件 → 步骤2+
+  1. `<doc_root>/tickets/` 有文件 → 步骤4+
+  2. `<doc_root>/specs/` 有文件 → 步骤3+
+  3. `<doc_root>/adr/` 有文件，或项目根目录有 CONTEXT.md → 步骤2+
   4. 以上均无 → 步骤1
   推断后从该步骤重新开始，重建 todolist.md
 
 ## 文档目录约定
 
-两个目录层级：
-
-**项目根目录（不受 doc_root 影响）：**
-- `todolist.md` — 进度指针
-
-**<doc_root>/（grill-with-docs 和 superpowers 文档）：**
+工作流产出分两处：项目根目录放跨任务的 CONTEXT.md + todolist.md，其余单任务产物统一在 `<doc_root>/`（默认 `docs/grillme/`）下。
 
 ```
 <doc_root>/
-├── grillme/
-│   ├── <NNNN>-<title>-CONTEXT.md       # grill-with-docs 术语表
-│   └── adr/
-│       └── <NNNN>-<title>.md           # grill-with-docs ADR
-├── superpowers/
-│   ├── specs/                          # brainstorming 设计文档
-│   │   └── YYYY-MM-DD-<name>-design.md
-│   ├── plans/                          # writing-plans 实施计划
-│   │   └── YYYY-MM-DD-<name>.md
-│   └── archive/                        # 步骤7归档
-│       └── YYYY-MM-DD-<name>/
-│           ├── specs/
-│           └── plans/
+├── adr/                                # 步骤1: 架构决策记录
+│   └── NNNN-<slug>.md
+├── specs/                              # 步骤2: 设计文档
+│   └── YYYY-MM-DD-<feature>.md
+├── tickets/                            # 步骤3: 票文件
+│   ├── 01-<slug>.md
+│   └── ...
+└── archive/                            # 步骤6: 归档（仅 adr/spec/tickets）
+    └── YYYY-MM-DD-<feature>/
+        ├── adr/
+        ├── spec.md
+        └── tickets/
 ```
 
-Skill 默认输出路径会被覆盖为上述结构。
-
-## 会话恢复
-
-1. 读 `todolist.md`
-2. 不存在 → 启动决策树（询问 doc_root，从步骤1开始）
-3. 存在 + 有 `- [ ]` → 对应步骤继续
-4. 存在 + 全 `- [x]` → 检查发布状态 → 提示发布+归档或清理
+项目根目录的 CONTEXT.md（步骤1产出，项目级 ubiquitous language）和 todolist.md（进度指针）不在 <doc_root>/ 下。
 
 ## 用户绕路处理
 
@@ -178,32 +163,21 @@ Skill 默认输出路径会被覆盖为上述结构。
 | 用户意图 | 处理 |
 |---------|------|
 | "跳过步骤X" | 说明该步为什么不可跳过（一句话），若用户坚持则记录到 todolist.md 顶部注释 |
-| "这步已经做过了" | 验证产物是否存在（如 spec/plan 文档），存在即可跳过 |
-| "换个方案" | 回到设计，重新 brainstorming |
-| "需求变了" | 回到追问，追加 todolist.md 顶部注释说明变更 |
+| "这步已经做过了" | 验证产物是否存在（如 spec/tickets 文件），存在即可跳过 |
+| "换个方案" | 回到步骤2设计，重新产生 spec |
+| "需求变了" | 回到步骤1追问，追加 todolist.md 顶部注释说明变更 |
 | 步骤中被打断 | 下次会话通过 todolist.md 恢复，从当前步骤继续 |
 
 ## 失败处理
 
 | 步骤 | 触发条件 | 一线修复 | 仍失败兜底 |
 |------|---------|---------|-----------|
-| 1. 追问 | 需求模糊 | grill-with-docs 自有多轮追问机制 | 超过3轮无结论 → 列出待澄清项让用户逐条确认 |
-| 2. 设计 | 方案分歧大 | brainstorming 自有方案对比机制 | 用户不选 → 默认简单方案，记录理由到 todolist.md |
-| 3. 拆分 | 任务粒度过大 | writing-plans 要求每步 2-5 分钟 | 仍过大 → 标记需人工拆分 |
-| 4. 编码 | 测试写不出 | 先写最小实现让测试通过 | 再逐步加边界，每加一个跑全量；非代码任务跳过 |
-| 5. 审查 | Skill("code-review") 发现严重问题 | 修复后重跑 Skill("code-review") | 最多循环 2 次，仍不过 → 标记已知风险，用户决策 |
-| 6. 发布 | gf 合并冲突 | 显示冲突文件，等待用户手动解决 | 解决失败 → `git merge --abort`，记录冲突到 todolist.md |
-| 7. 归档 | 归档目录已存在 | 追加序号 `-2`、`-3` | 仍冲突 → 手动指定归档名 |
-
-## 🔴 反例（绝不）
-
-| # | 反模式 | 原因 |
-|---|--------|------|
-| 1 | 跳过人类确认直接写代码 | 方向可能全错 |
-| 2 | 不写测试直接写实现 | 没测试 = 不可信 |
-| 3 | 步骤未完成就跳下一步 | 技术债叠加 |
-| 4 | Skill("code-review") 有 CRITICAL 仍 commit | 生产埋雷 |
-| 5 | 跳过追问/设计/拆分直接写代码 | 需求不清 = 必返工 |
-| 6 | 追问输出包含技术实现细节 | 追问关注业务需求，技术方案留给设计阶段 |
-| 7 | 截断 Skill 的自然产出格式 | 每个 Skill 有自己的输出约定，用 <doc_root> 覆盖路径即可，不要改写内容格式 |
-| 8 | 步骤4编码阶段 commit | commit 跳过审查直接落盘。所有 commit 统一由步骤6执行 |
+| 1. 追问 | 需求模糊 | grilling 自有多轮追问机制 | 超过3轮无结论 → 列出待澄清项让用户逐条确认 |
+| 1. 追问 | grilling 或 domain-modeling 不可用 | 引导安装 mattpocock-skills（见启动依赖检查） | — |
+| 2. 设计 | 方案分歧大 | 列出方案对比，推荐默认方案 | 用户不选 → 采用最简单方案，记录理由到 todolist.md |
+| 3. 拆分 | 票粒度过大 | 进一步拆分，每票不超过单次上下文窗口 | 仍过大 → 标记需人工拆分 |
+| 3. 拆分 | 阻塞关系复杂 | 简化依赖图，合并可并行的票 | 展示完整依赖图让用户确认 |
+| 4. 编码 | 测试写不出 | tdd 遵循 red-green 循环，先写最小实现 | 仍卡住 → 标记该票需人工处理，继续下一票 |
+| 4. 编码 | tdd 不可用 | AI 手动遵循 tdd 模式 | 票不可跳过 → 标记暂停，等待用户修复依赖 |
+| 5. 发布 | 合并冲突 | 显示冲突文件，等待用户手动解决 | 解决失败 → `git merge --abort`，记录冲突到 todolist.md |
+| 6. 归档 | 归档目录已存在 | 追加序号 `-2`、`-3` | 仍冲突 → 手动指定归档名 |
