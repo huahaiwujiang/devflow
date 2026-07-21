@@ -1,183 +1,335 @@
 ---
 name: huahai-workflow
-description: 开发工作流——从需求追问到代码发布，启动时自动检查依赖。当用户提出开发任务、新功能、要做某个特性、检查依赖、setup、环境检测、/huahai-workflow 时触发。即使用户想跳过步骤直接写代码，也应先走此流程确保方向正确。
+description: 开发工作流——从需求追问到编码；发布/归档/评审默认手动。当用户提出开发任务、新功能、要做某个特性、检查依赖、setup、环境检测、/huahai-workflow 时触发。即使用户想跳过步骤直接写代码，也应先走此流程确保方向正确。
 ---
 
 # 开发工作流
 
-> grilling + domain-modeling 管追问，to-spec 模板管设计，to-tickets 模板管拆分，tdd 管编码。
+> grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分，tdd 管编码。
+> 自动挡只到写代码；发布（gf）、归档、code-review 默认手动。
 
-## 🧭 启动决策树（读到本 skill 后第一件事）
+---
 
-**前置：轻量依赖检查（<1s）**
+## 三条核心原则（贯穿全程）
 
-```bash
-ls ~/.claude/plugins/cache/mattpocock/mattpocock-skills/ 2>/dev/null
+1. **可观测性（第一优先级）**：用户必须随时能从「Workflow 状态报告」和磁盘文件判断当前进度。所以状态报告每轮必附、禁止在产物文件不存在时写 todolist 元信息或勾选任务——不是形式主义，是让进度可审计、可恢复。
+
+2. **防跳步**：步骤1-3（追问/设计/拆票）+ CHECKPOINT 不可跳过。原因是用户答完第一问就想写代码时，常因需求没收敛而返工；前置追问和设计正是把返工成本前置。
+
+3. **解耦（发布与归档分离）**：`/gf` 不暗含归档，归档不要求已 push。两者只在用户**同一句提示词**明确写明时才联动。这样用户可以只发布、只归档、或发布并归档，互不绑定。
+
+---
+
+## 自动挡 / 手动挡
+
+| 挡位 | 范围 | 何时执行 |
+|------|------|----------|
+| **自动挡** | 步骤1-3（含 CHECKPOINT）→ 步骤4（逐票编码、勾选、验证） | `/huahai-workflow`、实现需求、用户确认进步骤4 / 「写代码」 |
+| **手动挡** | 步骤5 发布（`/gf`）、可选 `/code-review`、步骤6 归档 | **仅当用户显式说出**：`/gf`、发布、推送、`/code-review`、归档 |
+
+自动挡终点 = 步骤4 全部 `[x]` 且验证通过。到此**停住**，不自动 commit/push/归档（why 见核心原则3）。停住时状态报告「下一步」固定提示：
+
+> 编码已完成。请先自行查看变更。发布请 `/gf`（加「归档」则推送后一并归档），评审请 `/code-review`，仅归档请说「归档」。
+
+---
+
+## 每轮回复末尾：Workflow 状态报告（强制）
+
+**每一轮**涉及 workflow 的回复，末尾必须附以下块（不可省略）：
+
+```markdown
+---
+## Workflow 状态
+
+| 项 | 内容 |
+|----|------|
+| 当前步骤 | 步骤 N — \<名称\> |
+| doc_root | \<路径\> |
+| 本步产出 | \<文件路径列表，无则写「无」\> |
+| ADR | \<路径或无 — 无 ADR 时写原因，如「无架构权衡」\> |
+| 已跳过 | \<步骤 + 原因 + 是否用户明确要求；无则写「无」\> |
+| 待你确认 | \<CHECKPOINT 内容；无则写「无」\> |
+| 下一步 | \<具体动作；步骤4 完成后用上方固定提示\> |
+---
 ```
-- ❌ 目录不存在或无版本子目录 → 提示安装 `claude plugin install mattpocock-skills@mattpocock`，安装后 `/reload-skills`，重新触发工作流
-- ✅ 就绪 → 继续
+
+---
+
+## 硬门禁（违反则停止：禁止写业务代码、禁止推进阶段）
+
+门禁存在的意义：让进度只认磁盘产物 + 用户 CHECKPOINT，而非模型自我声称。这样会话中断、换宿主都能恢复。
+
+| 动作 | 前置条件 |
+|------|----------|
+| 写入 `<!-- 阶段: 步骤2 -->` | 步骤1 用户已确认 + `CONTEXT.md` 已更新 |
+| 写入 `<!-- spec: ... -->` | **对应 spec 文件已创建** + 用户 CHECKPOINT 确认 |
+| 写入 `<!-- tickets_root: ... -->` | **`tickets/` 下至少 1 个 `.md`** + 用户 CHECKPOINT 确认 |
+| 写入 `- [ ]` 任务清单 | 步骤3 完成（任务必须来自票文件标题/摘要，禁止手写） |
+| 勾选 `- [x]` | 对应票文件存在 + 该票验收条件已满足 |
+| **创建/修改业务代码** | `<!-- 阶段: 步骤4 -->` 且 Integrity 校验通过（见下） |
+| 步骤5 发布（gf） | 步骤4 全部 `[x]` + **用户显式要求** `/gf` 或发布/推送 |
+| 步骤6 归档 | **用户显式要求**归档（**不要求**步骤5 已完成） |
+
+### Integrity 校验（步骤4 编码前必跑）
+
+读取 todolist.md 元信息，**逐项验证文件存在**，并在状态报告中写明「Integrity：通过」或列出失败项：
 
 ```
-读 todolist.md（始终在项目根目录）
-├─ 不存在 ──→ 1. 问用户：「设计文档输出到哪个目录？」（默认 docs/grillme/）
-│             2. 创建 todolist.md，写入顶部元信息（doc_root + 阶段: 步骤1）
-│             3. 从步骤1开始
-├─ 存在 + 用户说"从头开始"/"重新来"/"新任务" ──→ 清空 todolist.md 全部内容，重新走流程
-├─ 存在 + 有未勾选任务 ──→ 跳到对应步骤继续
+doc_root 目录存在
+spec 元信息指向的文件存在
+tickets_root 目录存在且含 ≥1 个 .md
+阶段 ≥ 步骤4
+```
+
+任一失败 → **停止编码**，报告损坏项，从缺失步骤重做。禁止「元信息先写、文件后补」。
+
+---
+
+## 启动决策树（读到本 skill 后第一件事）
+
+### 1. 依赖检查（<1s）
+
+检查本机是否可加载 `mattpocock-skills` 中的 grilling / to-spec / to-tickets / tdd（路径因宿主而异，常见如插件缓存或 skills 目录）。
+
+- ✅ 可加载 → 优先按对应子 skill 执行
+- ❌ 不可用 → **不阻塞本流程**：在状态报告写「子 skill 不可用，改用手搓」；步骤1 仍一次一问+推荐答案；步骤2/3/4 仍落盘 spec/tickets 并按硬门禁推进
+
+### 2. doc_root 解析（必须展示并等用户确认）
+
+按优先级选取，**在回复中列出选项并等用户确认**（工具不可用则文字提问，禁止静默默认）：
+
+| 优先级 | 路径 | 适用 |
+|--------|------|------|
+| 1 | 用户指定 | 用户消息中给出的目录 |
+| 2 | `yqsz/docs/grillme` | 本仓库园启子项目（**推荐**） |
+| 3 | `docs/grillme` | 通用 monorepo 根 |
+
+确认后 **立即创建**（若不存在）：
+
+```
+<doc_root>/adr/
+<doc_root>/specs/
+<doc_root>/tickets/
+<doc_root>/archive/
+```
+
+各目录可空；**空目录也要建**，避免「路径写了、文件夹不存在」。
+
+若当前回合**禁止写盘**：先完成确认与追问，在状态报告注明「待可写后立刻建目录」；首个可写回合必须先补建四目录 + 合法 todolist，再写其它产物。
+
+### 3. 读 todolist.md（项目根目录）
+
+```
+读 todolist.md
+├─ 不存在 ──→ 创建（仅 doc_root + 阶段:步骤1，见「初始形态」）→ 步骤1
+├─ 存在 + Integrity 失败 ──→ 报告损坏，从推断步骤重做（见「损坏处理」）
+├─ 存在 + 用户说「从头开始/重新来/新任务」──→ 清空，重建步骤1
+├─ 存在 + 有未勾选任务 ──→ 从 `<!-- 阶段 -->` 继续
 └─ 存在 + 全部已勾选
-   ├─ 已发布（git log origin/main..HEAD 为空，无未推送提交）──→ 删除 todolist.md，问"新功能？"→ 重新走启动流程
-   └─ 未发布 ──→ 提示用户先执行步骤5发布 + 步骤6归档
+   ├─ 用户说归档 ──→ 步骤6
+   ├─ 用户说 /gf 或发布 ──→ 步骤5
+   └─ 否则 ──→ 停住，提示：编码已完成，发布/评审/归档请手动
 ```
+
+会话恢复或从探索转入编码时：一律以 todolist 的 `<!-- 阶段 -->` 与磁盘产物为准；缺产物则回退对应步骤。
+
+### 初始 todolist 形态（步骤1 开始时唯一合法内容）
+
+```markdown
+<!-- doc_root: yqsz/docs/grillme -->
+<!-- 阶段: 步骤1 -->
+```
+
+**禁止**在步骤1 出现：`context:`、`spec:`、`tickets_root:`、`- [ ]` 任务、`- [x]`。
+
+---
+
+## 快速通道（Fast Track）
+
+当**同时**满足以下条件，可压缩步骤1-3 的追问与文档篇幅（**不可跳过 CHECKPOINT 和产物文件**）：有 PRD / 移动端原型 / PC 已对接接口，且用户已在对话中确认范围清单。
+
+启用时在 todolist **顶部**追加（步骤1 确认后写入）：
+
+```markdown
+<!-- fast-track: 用户确认 YYYY-MM-DD — \<一句话范围\> -->
+```
+
+快速通道只压缩篇幅，不改门禁：spec 和 tickets 文件仍必须落盘，CHECKPOINT 仍要走，步骤4 结束后仍停住。各步骤的快速通道最低要求见下文对应小节。
+
+---
 
 ## 工作流链路
 
-每一步都有明确的 **输入 → Skill → 自然产出 → 完成标志**。Skill 按其自身流程运行，工作流只做编排，不截断输出格式。
-
-todolist.md 在启动时创建（仅含 doc_root + 阶段），随步骤推进逐步填充元信息和任务清单。
-
 ```
-步骤1: 追问（WHAT — 用户要什么，领域模型是什么）
-  执行: Skill("mattpocock-skills:grilling") 为主驱动追问（decision tree，一次一问，每问附推荐答案）；Skill("mattpocock-skills:domain-modeling") 在追问过程中伴随记录术语表/ADR
-  说明: grill-with-docs 有 disable-model-invocation，但其内容即 "grilling + domain-modeling"，直接调用底层 skill 等价
-  输入: 用户提供的需求文档/描述
-  产出:
-    - 项目根目录/CONTEXT.md（领域术语表，项目级 ubiquitous language，跨任务累积。若已存在则追加/更新，不覆盖）
-    - <doc_root>/adr/NNNN-<slug>.md（架构决策记录，仅在满足三条件时创建：难逆转、缺上下文会惊讶、真实权衡结果）
-  规则:
-    - 关注业务 WHAT，不涉及技术 HOW（API 路径、表结构、技术栈选型）
-    - 文档不足时可读代码补充理解，但追问输出为纯业务视角
-  兜底: 若上述 Skill 不可用 → 引导用户运行 `claude plugin install mattpocock-skills@mattpocock`
-  完成: grilling + domain-modeling 流程结束 → 总结领域模型关键点（核心术语、边界上下文），用户确认理解无误后，更新 todolist.md：
-    1. 写入 `<!-- context: CONTEXT.md -->`（根目录，如果创建/更新了）
-    2. 更新阶段为「步骤2」
-
-步骤2: 设计（HOW — 怎么实现）
-  执行: Skill("mattpocock-skills:to-spec")
-  失败执行: 直接 Read ~/.claude/plugins/cache/mattpocock/mattpocock-skills/<最新版本>/skills/engineering/to-spec/SKILL.md，遵循其 process（explore → seams 确认 → 按 spec-template 写 spec）
-  输入: 步骤1的 CONTEXT.md（根目录）+ adr/ + 项目现有代码
-  偏离: 跳过「publish to issue tracker」等 tracker 相关步骤 —— spec 写入 <doc_root>/specs/YYYY-MM-DD-<feature>.md 即可
-  完成: 🔴 CHECKPOINT — 展示设计文档，等待用户明确确认后，更新 todolist.md：
-    1. 写入 `<!-- spec: <设计文档路径> -->`
-    2. 更新阶段为「步骤3」
-
-步骤3: 拆分（切成垂直切片）
-  执行: Skill("mattpocock-skills:to-tickets")
-  失败执行: 直接 Read ~/.claude/plugins/cache/mattpocock/mattpocock-skills/<最新版本>/skills/engineering/to-tickets/SKILL.md，遵循其 process（gather → explore → draft vertical slices → quiz user）
-  输入: todolist.md 元信息 `<!-- spec: -->` 指向的设计文档 + 代码库
-  偏离: 跳过「publish tickets to tracker」——用其 local-ticket-template，票写入 <doc_root>/tickets/<NN>-<slug>.md
-  完成: 🔴 CHECKPOINT — 展示票列表（含阻塞关系），用户确认拆分粒度后，更新 todolist.md：
-    1. 写入 `<!-- tickets_root: <doc_root>/tickets/ -->`
-    2. 从票文件中提取验收条件摘要，写入 `- [ ] <票标题>`
-    3. 更新阶段为「步骤4」
-
-步骤4: 编码（逐票实现）
-  执行: Skill("mattpocock-skills:tdd")
-  输入: todolist.md 任务清单 + <doc_root>/tickets/ 中的票文件
-  每个票的流程:
-    1. 确认测试缝（seams）— 与用户确认在哪个公共接口层测试
-    2. Skill("mattpocock-skills:tdd") — 先写失败测试 → 最小实现让测试通过 → 循环
-    3. 单票实现完成后，勾选 todolist.md 中对应任务
-  规则:
-    - 🚫 禁止 commit。只写代码和测试，提交统一由步骤5执行
-    - 测试只验证外部行为，不测试实现细节
-    - 工作顺序遵循票依赖图（blocked-by 关系），先做无依赖票
-    - 频繁类型检查，单文件测试循环，全量测试最后过一遍
-  说明: 不用 Skill("implement")——implement 有 disable-model-invocation + 内嵌 commit/review，改调底层 tdd 原语
-  注意: tdd 启动时会读 CONTEXT.md（步骤1产出，在项目根目录）对齐术语与接口词汇
-  完成: 所有票 ✅，测试全绿，票依赖图所有边已满足，变更待提交。提示用户「如需代码审查可手动运行 /code-review」（可选，不阻塞发布）
-
-步骤5: 发布（git flow）
-  执行: Skill("huahai-workflow-gf")
-  输入: 步骤4积累的全部未提交变更
-  完成: 代码已提交 + 推送
-
-步骤6: 归档
-  输入: todolist.md 元信息 `<!-- spec: -->`、`<!-- tickets_root: -->`、`<!-- context: -->`
-  动作:
-    1. 创建 <doc_root>/archive/YYYY-MM-DD-<feature>/
-    2. 将 adr/、spec 文档、tickets 目录全部移入归档目录
-    3. CONTEXT.md 留在项目根目录（跨任务累积，不归档）
-    4. 删除 todolist.md
-  完成: 设计产物已归档，临时文件已清理，CONTEXT.md 保留供下次任务复用
+步骤1: 追问（WHAT）
+步骤2: 设计（HOW）     🔴 CHECKPOINT
+步骤3: 拆分（垂直切片）  🔴 CHECKPOINT
+步骤4: 编码（逐票 TDD）  ← 自动挡终点；全部 [x] 后停住
+────────── 以下仅手动 ──────────
+步骤5: 发布（/gf）       ← 用户显式
+（可选）/code-review
+步骤6: 归档             ← 用户显式；与 gf 解耦
 ```
+
+### 步骤1: 追问（WHAT）
+
+- **执行**：优先 Skill(`grilling`)；不可用则手搓 — **一次一问**，每问附推荐答案，**等用户回复后再下一问**
+- **伴随**：优先 Skill(`domain-modeling`) 记录术语；不可用则直接写入 CONTEXT。ADR 仅在三条件同时满足时创建：难逆转、缺上下文会惊讶、真实权衡
+- **输入**：用户需求 / PRD / 原型说明
+- **产出**：
+  - 项目根 `CONTEXT.md`（**仅业务 WHAT**：术语、状态含义、边界；**禁止** API 路径、分包名、表结构）
+  - `<doc_root>/adr/NNNN-<slug>.md`（0~N 个；0 个时在状态报告写「ADR：无 — \<原因\>」）
+- **推进**：达成门禁（用户确认 + CONTEXT 更新）→ `<!-- context: CONTEXT.md -->` + `<!-- 阶段: 步骤2 -->`
+- **快速通道下**：1 轮范围确认 → 更新 CONTEXT（业务术语）→ 用户确认；ADR 可为 0，须在状态报告说明
+
+### 步骤2: 设计（HOW）
+
+- **执行**：优先 Skill(`to-spec`)；不可用则按产出清单手写 mini-spec
+- **输入**：CONTEXT.md + adr/ + 代码库
+- **产出**：**必须先创建文件** `<doc_root>/specs/YYYY-MM-DD-<feature>.md`
+  - 含：页面/路由、API 对齐引用、组件结构、明确 **不在范围**
+  - API 路径、技术栈细节 **只写 spec**，不写 CONTEXT
+- **推进**：🔴 **CHECKPOINT** — 展示 spec 路径与摘要，等用户确认 → `<!-- spec: <路径> -->` + `<!-- 阶段: 步骤3 -->`
+- **快速通道下**：mini-spec（单文件 ≤120 行：页面、API 引用、不在范围）
+
+### 步骤3: 拆分（垂直切片）
+
+- **执行**：优先 Skill(`to-tickets`)；不可用则按 local-ticket 结构手写票文件
+- **输入**：spec 文件 + 代码库
+- **产出**：**必须先创建** `<doc_root>/tickets/01-<slug>.md` …（local-ticket-template）
+- **推进**：🔴 **CHECKPOINT** — 展示票列表 + blocked-by，等用户确认粒度 → `<!-- tickets_root: ... -->` + 从票文件提取 `- [ ]` + `<!-- 阶段: 步骤4 -->`
+- **快速通道下**：≤5 张票，每张含验收条件
+
+### 步骤4: 编码（逐票实现）— 自动挡终点
+
+- **执行**：优先 Skill(`tdd`)；不可用则手动 red-green 或票内约定的 build 验证
+- **前置**：Integrity 校验通过（结果写入状态报告）
+- **每票**：
+  1. 确认测试缝（或与用户确认「无自动化，build 验证」并写入票文件）
+  2. 实现 → 验证
+  3. 勾选 todolist 对应 `- [x]`（**顺序遵循票依赖**）
+- **规则**：🚫 禁止 commit / push（留给手动步骤5）
+- **完成**：全部 `[x]` + 验证通过 → 停住（见「自动挡 / 手动挡」固定提示）
+- **快速通道下**：测试缝与用户确认 1 次；无合适 seam 则在票内记录「无自动化测试，build 验证」
+
+### 步骤5: 发布（手动）
+
+- **触发**：用户明确说 `/gf`、发布、提交并推送等
+- **执行**：Skill(`huahai-workflow-gf`)
+- **完成**：代码已提交 + 推送
+- **归档**：默认不做。仅当本轮提示词同时提及归档时，由 gf skill 在推送后执行步骤6 等价动作
+
+### 步骤6: 归档（手动）
+
+- **触发**：用户明确说「归档」；或 `/gf`（等）**同一句**提示词里写明归档（由 gf skill 在推送后执行）
+- **不要求**步骤5 已单独完成
+- **动作**：
+  1. 创建 `<doc_root>/archive/YYYY-MM-DD-<feature>/`
+  2. 移入 adr/、spec、tickets/（**CONTEXT.md 留根目录**）
+  3. 删除 todolist.md
+
+---
 
 ## todolist.md 规约
 
-- **位置**：始终在项目根目录（不在 <doc_root>/ 下）
-- **定位**：进度指针，不重复计划内容。真正的任务细节在票文件中
-- **生命周期**：
+- **位置**：项目根目录（不在 doc_root 下）
+- **定位**：进度指针；任务细节只在票文件
+- **gitignore**：`todolist.md` 不入库（个人进度指针）；`<doc_root>/specs/`、`<doc_root>/tickets/` 应入库（团队可审计的设计产物）
 
-  | 阶段 | 操作 | 内容 |
-  |------|------|------|
-  | 启动 | 创建 | `<!-- doc_root: -->` + `<!-- 阶段: 步骤1 -->` |
-  | 步骤1 完成 | 更新 | `<!-- context: CONTEXT.md -->` (根目录，如果创建/更新了) + 阶段 → 步骤2 |
-  | 步骤2 完成 | 更新 | `<!-- spec: -->` + 阶段 → 步骤3 |
-  | 步骤3 完成 | 更新 | `<!-- tickets_root: -->` + 票清单 + 阶段 → 步骤4 |
-  | 步骤4 | 勾选 | 逐个 `[x]` 完成票 |
-  | 步骤5 | 发布 | gf 提交+推送 |
-  | 步骤6 完成 | 删除 | 归档后删除 todolist.md（CONTEXT.md 留根目录保留） |
+### 生命周期
 
-- **顶部元信息**：
-  ```
-  <!-- doc_root: <绝对或相对路径> -->
-  <!-- context: CONTEXT.md -->
-  <!-- spec: <设计文档路径> -->
-  <!-- tickets_root: <票目录路径> -->
-  <!-- 阶段: <当前步骤> -->
-  ```
-- **格式**：每行 `- [ ] 任务描述`（步骤3从票文件中提取摘要），已完成改为 `- [x]`
-- **gitignore**：应加入 `.gitignore`
-- **损坏处理**：格式无法解析时，按以下优先级推断当前进度：
-  1. `<doc_root>/tickets/` 有文件 → 步骤4+
-  2. `<doc_root>/specs/` 有文件 → 步骤3+
-  3. `<doc_root>/adr/` 有文件，或项目根目录有 CONTEXT.md → 步骤2+
-  4. 以上均无 → 步骤1
-  推断后从该步骤重新开始，重建 todolist.md
+| 阶段 | todolist 变更 | 磁盘必有 |
+|------|--------------|----------|
+| 启动 | 仅 `doc_root` + `阶段:步骤1` | doc_root 四子目录 |
+| 步骤1 完成 | + `context:` + 阶段→2 | CONTEXT.md |
+| 步骤2 完成 | + `spec:` + 阶段→3 | specs/*.md |
+| 步骤3 完成 | + `tickets_root:` + `- [ ]` + 阶段→4 | tickets/*.md |
+| 步骤4 | 逐票 `[x]`；全部勾完仍停在步骤4 | 代码变更（未 commit，除非用户已手动 gf） |
+| 步骤5 | （仅用户触发 gf） | git push |
+| 步骤6 | （仅用户触发）删除 todolist | archive/ |
+
+### 元信息模板
+
+```markdown
+<!-- doc_root: yqsz/docs/grillme -->
+<!-- fast-track: ... -->           （可选）
+<!-- context: CONTEXT.md -->
+<!-- spec: yqsz/docs/grillme/specs/YYYY-MM-DD-feature.md -->
+<!-- tickets_root: yqsz/docs/grillme/tickets/ -->
+<!-- 阶段: 步骤N -->
+<!-- 编码完成待发布 -->             （步骤4 全部 [x] 后可选）
+<!-- skip: 步骤X — 用户要求 YYYY-MM-DD — 原因 -->   （仅用户明确要求跳过时）
+
+- [ ] 来自 01-xxx.md 的票标题
+```
+
+---
 
 ## 文档目录约定
 
-工作流产出分两处：项目根目录放跨任务的 CONTEXT.md + todolist.md，其余单任务产物统一在 `<doc_root>/`（默认 `docs/grillme/`）下。
-
 ```
 <doc_root>/
-├── adr/                                # 步骤1: 架构决策记录
-│   └── NNNN-<slug>.md
-├── specs/                              # 步骤2: 设计文档
-│   └── YYYY-MM-DD-<feature>.md
-├── tickets/                            # 步骤3: 票文件
-│   ├── 01-<slug>.md
-│   └── ...
-└── archive/                            # 步骤6: 归档（仅 adr/spec/tickets）
-    └── YYYY-MM-DD-<feature>/
-        ├── adr/
-        ├── spec.md
-        └── tickets/
+├── adr/           # 步骤1，可为空
+├── specs/         # 步骤2，必有文件
+├── tickets/       # 步骤3，必有文件
+└── archive/       # 步骤6（手动）
+
+项目根/
+├── CONTEXT.md     # 跨任务累积，步骤1
+└── todolist.md    # 进度指针，gitignore
 ```
 
-项目根目录的 CONTEXT.md（步骤1产出，项目级 ubiquitous language）和 todolist.md（进度指针）不在 <doc_root>/ 下。
+---
 
 ## 用户绕路处理
 
-用户可能说"直接写代码"、"跳过设计"、"这步不用做了"。处理原则：
-
 | 用户意图 | 处理 |
 |---------|------|
-| "跳过步骤X" | 说明该步为什么不可跳过（一句话），若用户坚持则记录到 todolist.md 顶部注释 |
-| "这步已经做过了" | 验证产物是否存在（如 spec/tickets 文件），存在即可跳过 |
-| "换个方案" | 回到步骤2设计，重新产生 spec |
-| "需求变了" | 回到步骤1追问，追加 todolist.md 顶部注释说明变更 |
-| 步骤中被打断 | 下次会话通过 todolist.md 恢复，从当前步骤继续 |
+| 「直接写代码」 | 说明硬门禁；若坚持 → `<!-- skip: 步骤2,3 -->` + **仍须** mini-spec 与票（可极简）或用户书面承担；写完仍停在步骤4 |
+| 「跳过步骤 X」 | 一句话说明不可跳过原因；坚持 → `<!-- skip: 步骤X -->` 写入 todolist |
+| 「按计划实现 / 开始写代码」 | 只做到步骤4 并停住（见核心原则3） |
+| 第一问就答全范围 | **仍需**步骤1 摘要 + 用户确认；可走 fast-track，**不可**跳 spec/tickets 文件 |
+| 「这步做过了」 | **验证文件存在**；存在才跳过 |
+| 「换个方案」 | 回步骤2，新 spec |
+| 「需求变了」 | 回步骤1，todolist 顶部注释变更 |
+| 会话中断 | 读 todolist + Integrity 校验恢复 |
+
+---
 
 ## 失败处理
 
-| 步骤 | 触发条件 | 一线修复 | 仍失败兜底 |
-|------|---------|---------|-----------|
-| 1. 追问 | 需求模糊 | grilling 自有多轮追问机制 | 超过3轮无结论 → 列出待澄清项让用户逐条确认 |
-| 1. 追问 | grilling 或 domain-modeling 不可用 | 引导安装 mattpocock-skills（见启动依赖检查） | — |
-| 2. 设计 | 方案分歧大 | 列出方案对比，推荐默认方案 | 用户不选 → 采用最简单方案，记录理由到 todolist.md |
-| 3. 拆分 | 票粒度过大 | 进一步拆分，每票不超过单次上下文窗口 | 仍过大 → 标记需人工拆分 |
-| 3. 拆分 | 阻塞关系复杂 | 简化依赖图，合并可并行的票 | 展示完整依赖图让用户确认 |
-| 4. 编码 | 测试写不出 | tdd 遵循 red-green 循环，先写最小实现 | 仍卡住 → 标记该票需人工处理，继续下一票 |
-| 4. 编码 | tdd 不可用 | AI 手动遵循 tdd 模式 | 票不可跳过 → 标记暂停，等待用户修复依赖 |
-| 5. 发布 | 合并冲突 | 显示冲突文件，等待用户手动解决 | 解决失败 → `git merge --abort`，记录冲突到 todolist.md |
-| 6. 归档 | 归档目录已存在 | 追加序号 `-2`、`-3` | 仍冲突 → 手动指定归档名 |
+| 步骤 | 触发 | 修复 |
+|------|------|------|
+| 1 | 需求模糊 | grilling 多轮 |
+| 1 | 子 skill 不可用 | 手搓 grilling；状态报告注明；不因缺插件中止 |
+| 2 | 方案分歧 | 对比表 + 推荐默认；不选则最简单方案 + 记入 spec |
+| 3 | 票过大 | 再拆；仍过大 → 票内标「需人工拆分」 |
+| 4 | 测不出 | 记录「build 验证」；继续下一票 |
+| 5 | 冲突 | 展示冲突文件；失败则 merge --abort |
+
+### 损坏处理（todolist 与磁盘不一致）
+
+1. 跑 Integrity 校验，列出缺失项
+2. 按优先级推断真实进度：`tickets/*.md` 存在 → 步骤4+；`specs/*.md` 存在 → 步骤3+；`CONTEXT.md` 或 `adr/*.md` 存在 → 步骤2+；否则 → 步骤1
+3. **重建 todolist**（删除虚假元信息），从推断步骤继续
+4. 在状态报告「已跳过」中说明「上次 workflow 损坏已修复」
+
+---
+
+## 自检清单
+
+### 编码前
+
+- [ ] 本轮末尾已附 Workflow 状态报告
+- [ ] doc_root 四目录已存在
+- [ ] Integrity 已跑并写入状态报告
+- [ ] spec 文件存在且用户已确认
+- [ ] tickets 文件存在且用户已确认
+- [ ] todolist 任务来自票文件，非手写
+- [ ] CONTEXT 无 API/路径等技术 HOW
+- [ ] 未在用户确认 CHECKPOINT 前写业务代码
+
+### 步骤4 结束后
+
+- [ ] **未**自动 commit / push / 归档
+- [ ] 已停住并提示：查看变更 → `/gf` / `/code-review` / 「归档」
