@@ -75,6 +75,7 @@ description: 开发工作流——从需求追问到编码；发布/归档/评�
 读取 todolist.md 元信息，**逐项验证文件存在**，并在状态报告中写明「Integrity：通过」或列出失败项：
 
 ```
+project_root 目录存在（CONTEXT.md / todolist.md 在此，不在 doc_root）
 doc_root 目录存在
 spec 元信息指向的文件存在
 tickets_root 目录存在且含 ≥1 个 .md
@@ -87,6 +88,8 @@ tickets_root 目录存在且含 ≥1 个 .md
 
 ## 启动决策树（读到本 skill 后第一件事）
 
+> **回合纪律（启动阶段强制）**：每个需用户确认的决策**各自独占一回合**——展示选项后即停，等用户回复，**禁止**在同一回复里追加下一个决策或步骤1 的追问。具体到 doc_root：先单独确认目录 → 用户回复后建目录、更新 todolist → **下一回合**才开始步骤1 第一问。**禁止**给"确认目录 + 回答第一问"的合并回复示例。宁可多一个来回，也不要合并——合并会让用户第一眼懵。
+
 ### 1. 依赖检查（<1s）
 
 检查本机是否可加载 `mattpocock-skills` 中的 grilling / to-spec / to-tickets / tdd（路径因宿主而异，常见如插件缓存或 skills 目录）。
@@ -94,7 +97,13 @@ tickets_root 目录存在且含 ≥1 个 .md
 - ✅ 可加载 → 优先按对应子 skill 执行
 - ❌ 不可用 → **不阻塞本流程**：在状态报告写「子 skill 不可用，改用手搓」；步骤1 仍一次一问+推荐答案；步骤2/3/4 仍落盘 spec/tickets 并按硬门禁推进
 
-### 2. doc_root 解析（必须展示并等用户确认）
+### 2. doc_root 解析（独立回合：仅展示选项 + 等确认）
+
+> **两个根，别混**：本流程有两类根目录——
+> - **项目根**（git 仓库根；无 git 则 cwd）：`CONTEXT.md`、`todolist.md` 的家，**跨任务累积**，不随特性归档。
+> - **doc_root**（本步确认）：`adr/`、`specs/`、`tickets/`、`archive/` 的家，按特性归档。
+>
+> 本步只确认 doc_root；项目根自动取 git 仓库根（无 git 则 cwd），写入 todolist 的 `<!-- project_root: . -->`，后续所有「项目根」以此为准。**禁止把 CONTEXT.md / todolist.md 放进 doc_root。**
 
 按优先级选取，**在回复中列出选项并等用户确认**（工具不可用则文字提问，禁止静默默认）：
 
@@ -115,13 +124,13 @@ tickets_root 目录存在且含 ≥1 个 .md
 
 各目录可空；**空目录也要建**，避免「路径写了、文件夹不存在」。
 
-若当前回合**禁止写盘**：先完成确认与追问，在状态报告注明「待可写后立刻建目录」；首个可写回合必须先补建四目录 + 合法 todolist，再写其它产物。
+若当前回合**禁止写盘**：仍按回合纪律先确认目录（独立一回合），再进入步骤1 追问（下一回合）；在状态报告注明「待可写后立刻建目录」；首个可写回合必须先补建四目录 + 合法 todolist，再写其它产物。
 
 ### 3. 读 todolist.md（项目根目录）
 
 ```
 读 todolist.md
-├─ 不存在 ──→ 创建（仅 doc_root + 阶段:步骤1，见「初始形态」）→ 步骤1
+├─ 不存在 ──→ 创建（project_root + doc_root + 阶段:步骤1，见「初始形态」）→ 步骤1
 ├─ 存在 + Integrity 失败 ──→ 报告损坏，从推断步骤重做（见「损坏处理」）
 ├─ 存在 + 用户说「从头开始/重新来/新任务」──→ 清空，重建步骤1
 ├─ 存在 + 有未勾选任务 ──→ 从 `<!-- 阶段 -->` 继续
@@ -136,6 +145,7 @@ tickets_root 目录存在且含 ≥1 个 .md
 ### 初始 todolist 形态（步骤1 开始时唯一合法内容）
 
 ```markdown
+<!-- project_root: . -->
 <!-- doc_root: yqsz/docs/grillme -->
 <!-- 阶段: 步骤1 -->
 ```
@@ -177,9 +187,9 @@ tickets_root 目录存在且含 ≥1 个 .md
 - **伴随**：优先 Skill(`domain-modeling`) 记录术语；不可用则直接写入 CONTEXT。ADR 仅在三条件同时满足时创建：难逆转、缺上下文会惊讶、真实权衡
 - **输入**：用户需求 / PRD / 原型说明
 - **产出**：
-  - 项目根 `CONTEXT.md`（**仅业务 WHAT**：术语、状态含义、边界；**禁止** API 路径、分包名、表结构）
+  - 项目根 `CONTEXT.md`（**仅业务 WHAT**：术语、状态含义、边界；**禁止** API 路径、分包名、表结构）。**跨任务累积**——已存在则追加本特性术语段落，**禁止新建覆盖**；归档不移走
   - `<doc_root>/adr/NNNN-<slug>.md`（0~N 个；0 个时在状态报告写「ADR：无 — \<原因\>」）
-- **推进**：达成门禁（用户确认 + CONTEXT 更新）→ `<!-- context: CONTEXT.md -->` + `<!-- 阶段: 步骤2 -->`
+- **推进**：达成门禁（用户确认 + CONTEXT 更新）→ `<!-- context: CONTEXT.md -->`（项目根） + `<!-- 阶段: 步骤2 -->`
 - **快速通道下**：1 轮范围确认 → 更新 CONTEXT（业务术语）→ 用户确认；ADR 可为 0，须在状态报告说明
 
 ### 步骤2: 设计（HOW）
@@ -224,9 +234,13 @@ tickets_root 目录存在且含 ≥1 个 .md
 - **触发**：用户明确说「归档」；或 `/gf`（等）**同一句**提示词里写明归档（由 gf skill 在推送后执行）
 - **不要求**步骤5 已单独完成
 - **动作**：
-  1. 创建 `<doc_root>/archive/YYYY-MM-DD-<feature>/`
-  2. 移入 adr/、spec、tickets/（**CONTEXT.md 留根目录**）
-  3. 删除 todolist.md
+  1. **归档前对齐**：对比实际代码变更与 spec、tickets，确保归档的是"实际产物"而非"初始计划"——
+     - 查：有无代码变更未被任何票覆盖（如 bug 修复、临时方案）；有无票验收条件与实际实现不符；spec 技术设计是否与最终代码一致
+     - 有偏差 → spec 追加 `## as-built 备注`（写偏离点，无偏离省略）；受影响票追加 `## 实际结果`（标「已实现 / 部分 / 合并到XX票」+ 一句话差异）
+     - 无偏差 → 状态报告写「对齐检查：通过」
+  2. 创建 `<doc_root>/archive/YYYY-MM-DD-<feature>/`
+  3. 移入 `<doc_root>/adr/`、`<doc_root>/specs/`、`<doc_root>/tickets/`（**`CONTEXT.md` 留项目根（git 根，非 doc_root）**）
+  4. 删除 todolist.md
 
 ---
 
@@ -240,20 +254,21 @@ tickets_root 目录存在且含 ≥1 个 .md
 
 | 阶段 | todolist 变更 | 磁盘必有 |
 |------|--------------|----------|
-| 启动 | 仅 `doc_root` + `阶段:步骤1` | doc_root 四子目录 |
+| 启动 | `project_root` + `doc_root` + `阶段:步骤1` | doc_root 四子目录 |
 | 步骤1 完成 | + `context:` + 阶段→2 | CONTEXT.md |
 | 步骤2 完成 | + `spec:` + 阶段→3 | specs/*.md |
 | 步骤3 完成 | + `tickets_root:` + `- [ ]` + 阶段→4 | tickets/*.md |
 | 步骤4 | 逐票 `[x]`；全部勾完仍停在步骤4 | 代码变更（未 commit，除非用户已手动 gf） |
 | 步骤5 | （仅用户触发 gf） | git push |
-| 步骤6 | （仅用户触发）删除 todolist | archive/ |
+| 步骤6 | （仅用户触发）对齐 + 删除 todolist | archive/ |
 
 ### 元信息模板
 
 ```markdown
+<!-- project_root: . -->
 <!-- doc_root: yqsz/docs/grillme -->
 <!-- fast-track: ... -->           （可选）
-<!-- context: CONTEXT.md -->
+<!-- context: CONTEXT.md -->       （项目根，相对 project_root；非 doc_root）
 <!-- spec: yqsz/docs/grillme/specs/YYYY-MM-DD-feature.md -->
 <!-- tickets_root: yqsz/docs/grillme/tickets/ -->
 <!-- 阶段: 步骤N -->
@@ -322,6 +337,7 @@ tickets_root 目录存在且含 ≥1 个 .md
 
 - [ ] 本轮末尾已附 Workflow 状态报告
 - [ ] doc_root 四目录已存在
+- [ ] CONTEXT.md / todolist.md 在项目根，**未**误入 doc_root
 - [ ] Integrity 已跑并写入状态报告
 - [ ] spec 文件存在且用户已确认
 - [ ] tickets 文件存在且用户已确认

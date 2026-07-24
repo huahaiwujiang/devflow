@@ -84,10 +84,11 @@ git push origin <当前分支>
 对齐 `huahai-workflow` 步骤6：
 
 1. 从 `todolist.md` 读 `doc_root`（无则用用户指定或默认 `yqsz/docs/grillme`）
-2. 创建 `<doc_root>/archive/YYYY-MM-DD-<feature>/`（重名则 `-2`、`-3`…）
-3. 移入 `adr/`、`specs/`、`tickets/` 下当前任务产物（**`CONTEXT.md` 留项目根**）
-4. 删除项目根 `todolist.md`
-5. 若归档产生入库路径变更（如 `specs/` → `archive/...`），再走一轮简短 git：暂存 → 提交（`docs: 归档 <feature> grillme 产物`）→ 拉取 → 推送
+2. **归档前对齐**：对比实际代码变更（`git log --oneline -20 --stat` 查近期提交改了哪些文件）与 spec、tickets——有无变更未被任何票覆盖（如 bug 修复）；有无票验收条件与实际不符；spec 技术设计是否与最终代码一致。有偏差 → spec 追加 `## as-built 备注`、受影响票追加 `## 实际结果`（标状态 + 一句话差异）；无偏差 → 状态报告写「对齐检查：通过」
+3. 创建 `<doc_root>/archive/YYYY-MM-DD-<feature>/`（重名则 `-2`、`-3`…）
+4. 移入 `<doc_root>/adr/`、`<doc_root>/specs/`、`<doc_root>/tickets/` 下当前任务产物（**`CONTEXT.md` 留项目根（git 根，非 doc_root）**）
+5. 删除项目根 `todolist.md`
+6. 若归档产生入库路径变更（如 `specs/` → `archive/...`），再走一轮简短 git：暂存 → 提交（`docs: 归档 <feature> grillme 产物`）→ 拉取 → 推送
 
 ---
 
