@@ -1,0 +1,14 @@
+.gitignore
+  h_20193a38825318 2-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "1b000116006baa9f14090baea7e8b0dabb3f3db8",
+  "prompts": {},
+  "humans": {
+    "h_20193a38825318": {
+      "author": "huahai"
+    }
+  }
+}
