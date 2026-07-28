@@ -23,6 +23,7 @@ user_invocable: true
 - curl：一律 `-k`（内网自签常见；仅限可信内网）。JSON 用 `node -e`。后文 `curl ...` =  
   `curl -s -k -H "Authorization: Bearer $JIRA_TOKEN" -H "Accept: application/json"`（POST/PUT 再加 `Content-Type: application/json`）。
 - 确认：步骤 4 写状态前要确认；步骤 7 成功路径自动。只出计划不改代码时（只分析）到步骤 3 结束。
+- **回合纪律**：每个需用户填的决策**独占一回合**——展示后即停，等用户回复。禁止把「要配置」和「要项目/时间窗」写进同一条回复。
 
 ## 工作流
 
@@ -41,10 +42,10 @@ node -e "console.log(JSON.stringify({hasUrl:!!process.env.JIRA_BASE_URL,hasToken
 | 探测结果 | 动作 |
 |----------|------|
 | `hasUrl` 与 `hasToken` 均为 true | → 1b |
-| 缺 `JIRA_BASE_URL` 或 `JIRA_TOKEN` | **立刻停下**，一次性索取，**禁止**继续步骤 2 |
-| 仅缺 `JIRA_TESTER` | 不阻塞；建议一并收集 |
+| 缺 `JIRA_BASE_URL` 或 `JIRA_TOKEN` | **立刻停下**，本回合**只**索取配置（见下），**禁止**提项目/时间窗/关键词，**禁止**继续步骤 2 |
+| 仅缺 `JIRA_TESTER` | 不阻塞；可在本回合可选一并问，或交测时再问 |
 
-**索取（必填）**：Issue 系统 HTTPS 根地址（`JIRA_BASE_URL`）；Personal Access Token（`JIRA_TOKEN`）。可选：`JIRA_TESTER` 显示名。
+**索取（必填，本回合唯一内容）**：Issue 系统 HTTPS 根地址（`JIRA_BASE_URL`）；Personal Access Token（`JIRA_TOKEN`）。可选：`JIRA_TESTER` 显示名。
 
 用户回复后：
 
@@ -58,19 +59,21 @@ node -e "console.log(JSON.stringify({hasUrl:!!process.env.JIRA_BASE_URL,hasToken
 curl -s -k -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ${JIRA_TOKEN:-MISSING}" -H "Accept: application/json" "$JIRA_BASE_URL/rest/api/2/myself"
 ```
 
-- `200` → 步骤 2
-- `401/403` → 要新 token；会话内更新 env，并提示用户改用户环境变量
-- 连接失败 → 查 VPN / 地址；地址错则更新 `JIRA_BASE_URL`（同上）
+- `200` → **再**进入步骤 2（无 key 时才另开一回合要筛选条件）
+- `401/403` → 本回合只要新 token；会话内更新 env，并提示用户改用户环境变量
+- 连接失败 → 本回合只查 VPN / 地址；地址错则更新 `JIRA_BASE_URL`
 - token/url 仍空 → 回 1a，不可用 `MISSING` 蒙混
 
 ### 2. 定位 Issue
 
-**路径 A — 有 issue key：** 鉴权后拉详情。
+**仅当步骤 1 鉴权已通过后执行。**
 
-**路径 B — 无 key：**
+**路径 A — 有 issue key：** 直接拉详情（用户首条消息已带 key 的，配置+鉴权通过后即可拉，不必再问筛选）。
 
-1. 确认：项目（必填）、时间窗（默认 `14d`）、代码关键词（可选）
-2. 精确 project key 直接用；中文名/简称才拉项目列表：
+**路径 B — 无 key：** 鉴权成功后**单独一回合**确认筛选（本回合不要夹带配置问题）：
+
+1. 项目（必填）、时间窗（默认 `14d`）、代码关键词（可选）——展示后停，等用户回复
+2. 用户回复后再：精确 project key 直接用；中文名/简称才拉项目列表：
 
 ```bash
 curl ... "$JIRA_BASE_URL/rest/api/2/project" | node -e "process.stdin.on('data',d=>JSON.parse(d).forEach(p=>console.log(JSON.stringify({key:p.key,name:p.name}))))"
