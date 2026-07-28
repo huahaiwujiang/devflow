@@ -34,7 +34,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 | 挡位 | 范围 | 何时 |
 |------|------|------|
 | **自动挡** | 1 → 2–3 串联 → 编码前 CHECKPOINT → 4 | `/huahai-workflow`、实现需求、确认写代码 |
-| **手动挡** | 5 审查 → 6 gf → 7 归档 | 用户显式：发布/推送/`/huahai-workflow-gf`/归档；审查随发布触发 |
+| **手动挡** | 5 审查 → 6 发布 → 7 归档 | 用户显式：发布/推送/`/huahai-workflow-gf`/归档；审查随发布触发 |
 
 自动挡终点 = 步骤4 全部 `[x]` 且验证通过 → **停住**，不自动 commit/push/归档。状态报告「下一步」固定：
 
@@ -75,8 +75,8 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 | `<!-- 阶段: 步骤4 -->` | 🔴 编码前 CHECKPOINT 用户已确认 |
 | 勾选 `- [x]` | 票文件存在 + 验收条件满足 |
 | **写业务代码** | 阶段=步骤4 且 Integrity 通过（见 [recovery.md](references/recovery.md)） |
-| 步骤5 审查 | 步骤4 全 `[x]` + 用户显式发布/推送/gf |
-| 步骤6 gf | 审查通过 / 可推 / 已跳过 |
+| 步骤5 审查 | 步骤4 全 `[x]` + 用户显式发布/推送/`/huahai-workflow-gf` |
+| 步骤6 发布 | 审查通过 / 可推 / 已跳过 |
 | 步骤7 归档 | 用户显式归档（不要求步骤6 完成） |
 
 ---
@@ -103,7 +103,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 存在 + Integrity 失败 → 损坏处理（recovery.md）
 存在 + 「从头开始/新任务」→ 清空，重建步骤1
 存在 + 有未勾选 → 从 <!-- 阶段 --> 继续
-存在 + 全勾选 → 归档→步骤7；发布/gf→步骤5→6；否则停住提示手动
+存在 + 全勾选 → 归档→步骤7；发布/`/huahai-workflow-gf`→步骤5→6；否则停住提示手动
 ```
 
 会话恢复一律以 todolist 阶段 + 磁盘产物为准。
@@ -125,7 +125,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 ```
 步骤1 追问 → 步骤2 设计 ⇄ 步骤3 拆分（串联不问）
 → 🔴 编码前 CHECKPOINT → 步骤4 编码（自动挡终点）
-── 手动 ── 步骤5 审查 → 步骤6 gf → 步骤7 归档
+── 手动 ── 步骤5 审查 → 步骤6 发布（`/huahai-workflow-gf`）→ 步骤7 归档
 ```
 
 ### 步骤1: 追问（WHAT）
@@ -166,11 +166,11 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 
 ### 步骤6: 发布
 
-用户显式发布/gf → Skill(`huahai-workflow-gf`)。提示词同时提归档时由 gf 在推送后归档。
+用户显式发布 / `/huahai-workflow-gf` → Skill(`huahai-workflow-gf`)。提示词同时提归档时由该 skill 在推送后归档。
 
 ### 步骤7: 归档
 
-用户显式「归档」（或经 gf 且提示词含归档）。读并遵循 [archive.md](references/archive.md)。不要求步骤6 已单独完成。
+用户显式「归档」（或经 `/huahai-workflow-gf` 且提示词含归档）。读并遵循 [archive.md](references/archive.md)。不要求步骤6 已单独完成。
 
 ---
 

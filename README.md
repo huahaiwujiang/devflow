@@ -10,16 +10,16 @@
 
 ## 安装
 
+复制下面两行即可（本仓库三个 skill + 主流程依赖 mattpocock-skills）：
+
 ```bash
-npx skills add huahaiwujiang/huahai-workflow --skill '*' -y
-claude plugin install mattpocock-skills@mattpocock   # 主流程依赖
+npx skills@latest add huahaiwujiang/huahai-workflow --skill '*' -y
+npx skills@latest add mattpocock/skills -y
 ```
 
-装完后 `/reload-skills`（或新开会话）。全局加 `-g`；指定宿主加 `-a claude-code` / `-a cursor`；symlink 不稳加 `--copy`。
+安装器会提示装到哪个 Agent（Cursor / Claude Code / Codex 等）。常用参数：`-g` 全局；`-a cursor` / `-a claude-code` / `-a codex` 指定宿主；`--copy` 用拷贝代替 symlink。装完后按宿主习惯重载 skills 或新开会话。
 
-给 AI：贴仓库 URL，说「用 `npx skills add <url> --skill '*' -y` 装齐三个 skill」。
-
-Issue 可选环境变量：`JIRA_BASE_URL`、`JIRA_TOKEN`、`JIRA_TESTER`。
+mattpocock 装不上也不阻塞：主流程会手搓兜底。Issue 需系统/用户环境变量 `JIRA_BASE_URL`、`JIRA_TOKEN`、`JIRA_TESTER`（缺则首次使用时门禁索取）。
 
 ## 使用
 

@@ -16,10 +16,13 @@ user_invocable: true
 
 ## 约定
 
-- 配置：`JIRA_BASE_URL`、`JIRA_TOKEN`（必填）、`JIRA_TESTER`（交测用）。读 env → Claude Code 下 `~/.claude/settings.json` 的 `env`（其他宿主用等价环境变量）。用户提供后写入并 `export`。正文不写真实地址/人名。
+- 配置（权威源 = **系统/用户环境变量** → `process.env`）：
+  - `JIRA_BASE_URL`、`JIRA_TOKEN`（必填）
+  - `JIRA_TESTER`（交测用）
+  - 缺则门禁向用户一次性索取；当前会话 `export`（Windows PowerShell：`$env:NAME=...`）跑通；并提示写入**用户环境变量**持久化（Win：系统设置或 `setx`；改完需新开 IDE/终端）。正文不写真实地址/人名。
 - curl：一律 `-k`（内网自签常见；仅限可信内网）。JSON 用 `node -e`。后文 `curl ...` =  
   `curl -s -k -H "Authorization: Bearer $JIRA_TOKEN" -H "Accept: application/json"`（POST/PUT 再加 `Content-Type: application/json`）。
-- 确认：步骤 4 写状态前要确认；步骤 7 成功路径自动。Plan Mode 只分析不改。
+- 确认：步骤 4 写状态前要确认；步骤 7 成功路径自动。只出计划不改代码时（只分析）到步骤 3 结束。
 
 ## 工作流
 
@@ -29,19 +32,25 @@ user_invocable: true
 
 **1a. 探测配置（必做，禁止跳过）**
 
+只查 `process.env`：
+
 ```bash
-node -e "const fs=require('fs'),os=require('os'),path=require('path');const p=path.join(os.homedir(),'.claude','settings.json');let e={};try{e=JSON.parse(fs.readFileSync(p,'utf8')).env||{}}catch{};const g=k=>process.env[k]||e[k]||'';console.log(JSON.stringify({hasUrl:!!g('JIRA_BASE_URL'),hasToken:!!g('JIRA_TOKEN'),hasTester:!!g('JIRA_TESTER')}))"
+node -e "console.log(JSON.stringify({hasUrl:!!process.env.JIRA_BASE_URL,hasToken:!!process.env.JIRA_TOKEN,hasTester:!!process.env.JIRA_TESTER}))"
 ```
 
 | 探测结果 | 动作 |
 |----------|------|
-| `hasUrl` 与 `hasToken` 均为 true | 进入 1b（可将 settings 值 `export` 到当前 shell） |
+| `hasUrl` 与 `hasToken` 均为 true | → 1b |
 | 缺 `JIRA_BASE_URL` 或 `JIRA_TOKEN` | **立刻停下**，一次性索取，**禁止**继续步骤 2 |
 | 仅缺 `JIRA_TESTER` | 不阻塞；建议一并收集 |
 
 **索取（必填）**：Issue 系统 HTTPS 根地址（`JIRA_BASE_URL`）；Personal Access Token（`JIRA_TOKEN`）。可选：`JIRA_TESTER` 显示名。
 
-用户回复后：合并写入 settings `env` → `export` → 进入 1b。**提供之前不要调 Issue API。**
+用户回复后：
+
+1. 当前会话 `export` / `$env:` 注入三项（已有的可跳过）
+2. 告知用户用系统「用户环境变量」或 `setx` 持久化
+3. → 1b。**提供之前不要调 Issue API。**
 
 **1b. 鉴权**
 
@@ -50,8 +59,8 @@ curl -s -k -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ${JIRA_TOKEN
 ```
 
 - `200` → 步骤 2
-- `401/403` → 要新 token，更新后重试
-- 连接失败 → 查 VPN / 地址；地址错则更新 `JIRA_BASE_URL`
+- `401/403` → 要新 token；会话内更新 env，并提示用户改用户环境变量
+- 连接失败 → 查 VPN / 地址；地址错则更新 `JIRA_BASE_URL`（同上）
 - token/url 仍空 → 回 1a，不可用 `MISSING` 蒙混
 
 ### 2. 定位 Issue
@@ -94,7 +103,7 @@ curl ... "$JIRA_BASE_URL/rest/api/2/issue/ISSUE_KEY?fields=summary,description,s
 2. 关键词 Grep → Glob → 调用链 → 测试覆盖
 3. 输出：可能根因、影响范围、修改点、风险、测试缺口、复杂度
 
-只查看 → 结束。要修复 → Plan Mode 只出计划，否则进步骤 4。
+只查看 → 结束。要修复 → 只出计划不改代码则停；否则进步骤 4。
 
 ### 4. 开始编码 → 状态 = 处理中
 
@@ -122,7 +131,7 @@ curl ... -w "%{http_code}" -X POST "$JIRA_BASE_URL/rest/api/2/issue/ISSUE_KEY/tr
 
 ### 7. 交测回写 → 修复待验证 + `$JIRA_TESTER`
 
-先总结：文件、问题、测试结果、未覆盖风险。缺 `JIRA_TESTER` → 分配前向用户要显示名并持久化。
+先总结：文件、问题、测试结果、未覆盖风险。缺 `JIRA_TESTER` → 分配前向用户要显示名；会话 `export` 并提示写入用户环境变量。
 
 **流转（自动）**：GET transitions → 匹配「修复待验证」/「待验证」/「测试」→ 直接 POST；失败才列状态让用户选。
 
@@ -138,7 +147,7 @@ curl ... --get --data-urlencode "issueKey=ISSUE_KEY" --data-urlencode "query=$JI
 
 | 场景 | 处理 |
 |------|------|
-| 缺 URL/TOKEN | 步骤 1a 停下索取 |
+| 缺 URL/TOKEN | 步骤 1a 停下索取；会话 export + 提示写入用户环境变量 |
 | 401/403 | 换 token 重试 |
 | 网络/地址 | VPN；更新 BASE_URL |
 | 缺 TESTER | 步骤 7 前再问 |
@@ -147,4 +156,4 @@ curl ... --get --data-urlencode "issueKey=ISSUE_KEY" --data-urlencode "query=$JI
 | 搜索无结果 | 展示条件，建议放宽 |
 | 步骤4 未确认 | 不执行写操作 |
 | 步骤7 失败 | 报告并询问 |
-| Plan Mode | 只分析不修改 |
+| 只分析不改代码 | 步骤 3 后结束，不写业务代码 |

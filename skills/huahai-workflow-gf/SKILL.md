@@ -21,7 +21,7 @@ description: >
 
 | 提示词 | 行为 |
 |--------|------|
-| **含**归档措辞（`归档`、`一并归档`、`发布并归档`、`gf 并归档`、`提交并归档`、`推送并归档`、`archive` 指 workflow 归档） | git 全流程**之后**归档 |
+| **含**归档措辞（`归档`、`一并归档`、`发布并归档`、`提交并归档`、`推送并归档`、`archive` 指 workflow 归档） | git 全流程**之后**归档 |
 | **不含** | **只**做 git；**禁止**归档、**禁止**删 `todolist.md` |
 
 不算归档：业务文案「合同归档」等且未要求整理 grillme；单独说「归档」未触发本 skill → 由 `huahai-workflow` 步骤7 / [archive.md](../huahai-workflow/references/archive.md) 处理。
