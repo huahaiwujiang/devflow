@@ -1,10 +1,8 @@
 ---
 name: huahai-workflow-issue
 description: >
-  Use when the user calls /huahai-workflow-issue, gives an issue key like PROJ-123,
-  or clearly wants to view/fix bugs, browse issues, run JQL, or check project progress
-  on the self-hosted Issue system. Do not use for greenfield features without a ticket
-  (/huahai-workflow); do not run grilling→spec→tickets when an issue key or bugfix is in play.
+  调用 /huahai-workflow-issue、给出 PROJ-123 类 issue key，或明确要修缺陷/修 bug/看 issue/JQL/项目进度时使用。
+  无工单新特性改用 /huahai-workflow；带 issue key 或修缺陷时不要走 grilling→spec→tickets。
 user_invocable: true
 ---
 
@@ -16,10 +14,11 @@ user_invocable: true
 
 ## 约定
 
-- 配置（权威源 = **系统/用户环境变量** → `process.env`）：
+- 配置（权威源 = **用户环境变量** → `process.env`）：
   - `JIRA_BASE_URL`、`JIRA_TOKEN`（必填）
   - `JIRA_TESTER`（交测用）
-  - 缺则门禁向用户一次性索取；当前会话 `export`（Windows PowerShell：`$env:NAME=...`）跑通；并提示写入**用户环境变量**持久化（Win：系统设置或 `setx`；改完需新开 IDE/终端）。正文不写真实地址/人名。
+  - 缺则门禁索取；用户回复后 **Agent 负责持久化**：写入**用户**环境变量（勿写 Machine/系统级，无需管理员）+ 当前会话 `$env:` / `export`。正文不写真实地址/人名。
+  - Win：`[Environment]::SetEnvironmentVariable('NAME', $value, 'User')`；Unix：写入 shell profile 或等价用户级配置。已打开的其它 IDE/终端要**新开**才会读到用户环境变量；**本会话**靠 `$env:` 立刻可用。
 - curl：一律 `-k`（内网自签常见；仅限可信内网）。JSON 用 `node -e`。后文 `curl ...` =  
   `curl -s -k -H "Authorization: Bearer $JIRA_TOKEN" -H "Accept: application/json"`（POST/PUT 再加 `Content-Type: application/json`）。
 - 确认：步骤 4 写状态前要确认；步骤 7 成功路径自动。只出计划不改代码时（只分析）到步骤 3 结束。
@@ -47,10 +46,20 @@ node -e "console.log(JSON.stringify({hasUrl:!!process.env.JIRA_BASE_URL,hasToken
 
 **索取（必填，本回合唯一内容）**：Issue 系统 HTTPS 根地址（`JIRA_BASE_URL`）；Personal Access Token（`JIRA_TOKEN`）。可选：`JIRA_TESTER` 显示名。
 
-用户回复后：
+用户回复后（**Agent 执行，不要甩给用户手搓 setx**）：
 
-1. 当前会话 `export` / `$env:` 注入三项（已有的可跳过）
-2. 告知用户用系统「用户环境变量」或 `setx` 持久化
+1. 写入**用户**环境变量（持久化）+ 当前会话 `$env:` / `export`（立刻可用）。PowerShell 示例（值来自用户本回合回复，勿回显密文）：
+
+```powershell
+[Environment]::SetEnvironmentVariable('JIRA_BASE_URL', $url, 'User')
+[Environment]::SetEnvironmentVariable('JIRA_TOKEN', $token, 'User')
+# 若提供了 tester：
+[Environment]::SetEnvironmentVariable('JIRA_TESTER', $tester, 'User')
+$env:JIRA_BASE_URL = $url; $env:JIRA_TOKEN = $token
+# 若有 tester：$env:JIRA_TESTER = $tester
+```
+
+2. 简短告知：已写入用户环境变量；本会话已生效；其它已开窗口需新开才读到持久值。
 3. → 1b。**提供之前不要调 Issue API。**
 
 **1b. 鉴权**
@@ -60,8 +69,8 @@ curl -s -k -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ${JIRA_TOKEN
 ```
 
 - `200` → **再**进入步骤 2（无 key 时才另开一回合要筛选条件）
-- `401/403` → 本回合只要新 token；会话内更新 env，并提示用户改用户环境变量
-- 连接失败 → 本回合只查 VPN / 地址；地址错则更新 `JIRA_BASE_URL`
+- `401/403` → 本回合只要新 token；同样写 User + `$env:` 后重试
+- 连接失败 → 本回合只查 VPN / 地址；地址错则更新 User + `$env:` 中的 `JIRA_BASE_URL`
 - token/url 仍空 → 回 1a，不可用 `MISSING` 蒙混
 
 ### 2. 定位 Issue
@@ -134,7 +143,7 @@ curl ... -w "%{http_code}" -X POST "$JIRA_BASE_URL/rest/api/2/issue/ISSUE_KEY/tr
 
 ### 7. 交测回写 → 修复待验证 + `$JIRA_TESTER`
 
-先总结：文件、问题、测试结果、未覆盖风险。缺 `JIRA_TESTER` → 分配前向用户要显示名；会话 `export` 并提示写入用户环境变量。
+先总结：文件、问题、测试结果、未覆盖风险。缺 `JIRA_TESTER` → 分配前向用户要显示名；Agent 写入 User + `$env:`（同步骤 1a）。
 
 **流转（自动）**：GET transitions → 匹配「修复待验证」/「待验证」/「测试」→ 直接 POST；失败才列状态让用户选。
 
@@ -150,8 +159,8 @@ curl ... --get --data-urlencode "issueKey=ISSUE_KEY" --data-urlencode "query=$JI
 
 | 场景 | 处理 |
 |------|------|
-| 缺 URL/TOKEN | 步骤 1a 停下索取；会话 export + 提示写入用户环境变量 |
-| 401/403 | 换 token 重试 |
+| 缺 URL/TOKEN | 步骤 1a 停下索取；Agent 写 User 环境变量 + 会话 `$env:` |
+| 401/403 | 换 token，同样持久化到 User 后重试 |
 | 网络/地址 | VPN；更新 BASE_URL |
 | 缺 TESTER | 步骤 7 前再问 |
 | 未提供项目 / 无匹配 / 多匹配 | 补项目；修正；用户选 |

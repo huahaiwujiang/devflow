@@ -19,7 +19,7 @@ npx skills@latest add mattpocock/skills -y
 
 安装器会提示装到哪个 Agent（Cursor / Claude Code / Codex 等）。常用参数：`-g` 全局；`-a cursor` / `-a claude-code` / `-a codex` 指定宿主；`--copy` 用拷贝代替 symlink。装完后按宿主习惯重载 skills 或新开会话。
 
-mattpocock 装不上也不阻塞：主流程会手搓兜底。Issue 需系统/用户环境变量 `JIRA_BASE_URL`、`JIRA_TOKEN`、`JIRA_TESTER`（缺则首次使用时门禁索取）。
+mattpocock 装不上也不阻塞：主流程会手搓兜底。Issue：`JIRA_BASE_URL` / `JIRA_TOKEN` / `JIRA_TESTER` 存**用户环境变量**（缺则门禁索取，由 Agent 写入 User + 当前会话）。
 
 ## 使用
 

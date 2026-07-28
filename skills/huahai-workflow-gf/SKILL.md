@@ -1,10 +1,8 @@
 ---
 name: huahai-workflow-gf
 description: >
-  Use when the user calls /huahai-workflow-gf, or explicitly asks to commit and/or push
-  (e.g. 提交并推送、推送代码、git flow). Also use when that same prompt mentions 归档/archive
-  for grillme docs. Do not use for discussing commit style only, or for viewing diffs without
-  a request to commit/push.
+  调用 /huahai-workflow-gf，或明确要求提交/推送（如提交并推送、推送代码、git flow）时使用；
+  同一句提示词含归档/archive（grillme 产物）时一并归档。不要用于只讨论提交规范或仅查看 diff。
 ---
 
 # Git Flow（huahai-workflow-gf）

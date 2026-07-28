@@ -1,10 +1,8 @@
 ---
 name: huahai-workflow
 description: >
-  Use when the user starts a new feature or development task without an issue key,
-  or calls /huahai-workflow — including when they want to skip ahead and code immediately,
-  or ask about workflow setup / dependency checks. Do not use for PROJ-123, explicit bugfix,
-  or /huahai-workflow-issue; do not use for commit/push-only requests (/huahai-workflow-gf).
+  无工单的新特性 / 开发任务 / 要做某个功能，或调用 /huahai-workflow 时使用（含想跳过直接写代码、检查依赖、setup）。
+  不要用于 PROJ-123、明确修缺陷或 /huahai-workflow-issue；不要用于仅提交/推送（/huahai-workflow-gf）。
 ---
 
 # 开发工作流
