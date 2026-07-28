@@ -1,0 +1,28 @@
+skills/huahai-workflow-gf/SKILL.md
+  b97b833dd03904a6 4-5
+skills/huahai-workflow-issue/SKILL.md
+  b97b833dd03904a6 17,20-21,49,51-62,72-73,146,162-163
+README.md
+  b97b833dd03904a6 22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "63e17ab4c9503bef23fd08421d6c3d7acab3ffaf",
+  "prompts": {
+    "b97b833dd03904a6": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "f7f06901-f485-40d2-928e-4b0de8f10cc8",
+        "model": "default"
+      },
+      "human_author": "huahai",
+      "messages": [],
+      "total_additions": 24,
+      "total_deletions": 15,
+      "accepted_lines": 24,
+      "overriden_lines": 0,
+      "messages_url": "https://git-ai.hsjdata.com/cas/bc80fd89322ac52fcbba10aea28fe279ad597affd6d1198906418bbb1aeb2d4f"
+    }
+  }
+}
