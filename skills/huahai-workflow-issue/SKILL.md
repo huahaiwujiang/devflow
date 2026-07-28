@@ -8,164 +8,65 @@ user_invocable: true
 
 # Issue 任务 Skill（huahai-workflow-issue）
 
-调用：`/huahai-workflow-issue` 或 Skill(`huahai-workflow-issue`)。无工单新特性走 `/huahai-workflow`。
-
-推送前审查权威副本：同级安装时读 [`../huahai-workflow/references/pre-push-review.md`](../huahai-workflow/references/pre-push-review.md)。
+调用：`/huahai-workflow-issue`。无工单新特性 → `/huahai-workflow`。审查权威：[pre-push-review.md](../huahai-workflow/references/pre-push-review.md)。
 
 ## 约定
 
-- 配置（权威源 = **用户环境变量** → `process.env`）：
-  - `JIRA_BASE_URL`、`JIRA_TOKEN`（必填）
-  - `JIRA_TESTER`（交测用）
-  - 缺则门禁索取；用户回复后 **Agent 负责持久化**：写入**用户**环境变量（勿写 Machine/系统级，无需管理员）+ 当前会话 `$env:` / `export`。正文不写真实地址/人名。
-  - Win：`[Environment]::SetEnvironmentVariable('NAME', $value, 'User')`；Unix：写入 shell profile 或等价用户级配置。已打开的其它 IDE/终端要**新开**才会读到用户环境变量；**本会话**靠 `$env:` 立刻可用。
-- curl：一律 `-k`（内网自签常见；仅限可信内网）。JSON 用 `node -e`。后文 `curl ...` =  
-  `curl -s -k -H "Authorization: Bearer $JIRA_TOKEN" -H "Accept: application/json"`（POST/PUT 再加 `Content-Type: application/json`）。
-- 确认：步骤 4 写状态前要确认；步骤 7 成功路径自动。只出计划不改代码时（只分析）到步骤 3 结束。
-- **回合纪律**：每个需用户填的决策**独占一回合**——展示后即停，等用户回复。禁止把「要配置」和「要项目/时间窗」写进同一条回复。
+- **配置**：`JIRA_BASE_URL` + `JIRA_TOKEN` 必填，`JIRA_TESTER` 交测用。只认 `process.env`。缺则索取；Agent 写 **User** 环境变量（Win：`SetEnvironmentVariable(...,'User')`）+ 会话 `$env:`/`export`。勿写 Machine；勿回显密文；其它已开窗口需新开才读到 User。
+- **curl**：`-k`；`Authorization: Bearer $JIRA_TOKEN`；POST/PUT 加 Content-Type。后文 `curl ...` 即此。Win JSON：`curl -o %TEMP%\jira.json` 再 `node` 解析，忌管道过控制台。
+- **回合**：一问一停。配置 ≠ 筛选 ≠ 分析，禁止同回合夹带。步骤 2 禁止 git/Grep/根因；步骤 3 须用户点头后才进。
+- **写操作**：步骤 4 流转前确认；步骤 7 成功路径自动。
 
 ## 工作流
 
-步骤 4 写操作前需确认；步骤 7 失败才问人。
-
 ### 1. 配置门禁与鉴权
-
-**1a. 探测配置（必做，禁止跳过）**
-
-只查 `process.env`：
 
 ```bash
 node -e "console.log(JSON.stringify({hasUrl:!!process.env.JIRA_BASE_URL,hasToken:!!process.env.JIRA_TOKEN,hasTester:!!process.env.JIRA_TESTER}))"
 ```
 
-| 探测结果 | 动作 |
-|----------|------|
-| `hasUrl` 与 `hasToken` 均为 true | → 1b |
-| 缺 `JIRA_BASE_URL` 或 `JIRA_TOKEN` | **立刻停下**，本回合**只**索取配置（见下），**禁止**提项目/时间窗/关键词，**禁止**继续步骤 2 |
-| 仅缺 `JIRA_TESTER` | 不阻塞；可在本回合可选一并问，或交测时再问 |
+- 有 URL+TOKEN → 1b。缺任一 → **本回合只**要地址与 Token（可选 TESTER），停；**禁止**提项目/时间窗、禁止调 Issue API。
+- 用户回复后：写 User + `$env:` → 1b。
 
-**索取（必填，本回合唯一内容）**：Issue 系统 HTTPS 根地址（`JIRA_BASE_URL`）；Personal Access Token（`JIRA_TOKEN`）。可选：`JIRA_TESTER` 显示名。
+**1b** `GET .../myself`：`200` → 步骤 2；`401/403` → 只要新 Token 并持久化；连不上 → 查 VPN/改 URL。
 
-用户回复后（**Agent 执行，不要甩给用户手搓 setx**）：
+### 2. 定位 Issue（快，只出工单）
 
-1. 写入**用户**环境变量（持久化）+ 当前会话 `$env:` / `export`（立刻可用）。PowerShell 示例（值来自用户本回合回复，勿回显密文）：
+鉴权通过后。**禁止**代码排查。
 
-```powershell
-[Environment]::SetEnvironmentVariable('JIRA_BASE_URL', $url, 'User')
-[Environment]::SetEnvironmentVariable('JIRA_TOKEN', $token, 'User')
-# 若提供了 tester：
-[Environment]::SetEnvironmentVariable('JIRA_TESTER', $tester, 'User')
-$env:JIRA_BASE_URL = $url; $env:JIRA_TOKEN = $token
-# 若有 tester：$env:JIRA_TESTER = $tester
-```
+- **有 key** → 直接拉详情。
+- **无 key** → **另回合**只要：项目、时间窗（默认 `14d`）、关键词（可选）。再：精确 key 直用，否则拉 `/project` 匹配；JQL 强制前缀 `assignee = currentUser() AND resolution = Unresolved`，再 `project` / `updated >= -Nd` / `text ~` / `ORDER BY priority ASC, updated DESC`；`POST .../search` 最多展示 4 条，选定后拉详情。
 
-2. 简短告知：已写入用户环境变量；本会话已生效；其它已开窗口需新开才读到持久值。
-3. → 1b。**提供之前不要调 Issue API。**
+详情 fields：`summary,description,status,priority,issuetype,assignee,reporter,comment,subtasks,issuelinks,attachment,labels,components`。
 
-**1b. 鉴权**
+**交付后停**：标题/状态/优先级/类型/经办人/组件；描述+近 5 评论+子任务/关联/附件（wiki→文本）；缺口一句话（如「描述空」「已关闭」）。三选一：①只看过 ②继续分析→3 ③直接修/补复盘→3（再 4）。
 
-```bash
-curl -s -k -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ${JIRA_TOKEN:-MISSING}" -H "Accept: application/json" "$JIRA_BASE_URL/rest/api/2/myself"
-```
+### 3. 影响分析与方案
 
-- `200` → **再**进入步骤 2（无 key 时才另开一回合要筛选条件）
-- `401/403` → 本回合只要新 token；同样写 User + `$env:` 后重试
-- 连接失败 → 本回合只查 VPN / 地址；地址错则更新 User + `$env:` 中的 `JIRA_BASE_URL`
-- token/url 仍空 → 回 1a，不可用 `MISSING` 蒙混
+仅用户选 ②/③ 后。仓库：`git remote -v`（非仓库则问路径）。Grep→Glob→调用链→测试；可看相关提交。产出：根因、范围、改点、风险、测试缺口、复杂度。只分析则结束；要修→计划可停，否则→4。
 
-### 2. 定位 Issue
+### 4. 编码 → 处理中
 
-**仅当步骤 1 鉴权已通过后执行。**
+GET transitions → 匹配「处理中」/In Progress → **确认** → POST（204 勿 pipe）。失败列状态。流转成功后再写代码。
 
-**路径 A — 有 issue key：** 直接拉详情（用户首条消息已带 key 的，配置+鉴权通过后即可拉，不必再问筛选）。
+### 5. 审查
 
-**路径 B — 无 key：** 鉴权成功后**单独一回合**确认筛选（本回合不要夹带配置问题）：
+跟 [pre-push-review.md](../huahai-workflow/references/pre-push-review.md)；验收=工单描述/验收点。无文件则：有审查 skill 用 skill，否则自审，或用户跳过→6。
 
-1. 项目（必填）、时间窗（默认 `14d`）、代码关键词（可选）——展示后停，等用户回复
-2. 用户回复后再：精确 project key 直接用；中文名/简称才拉项目列表：
+### 6. 推送
 
-```bash
-curl ... "$JIRA_BASE_URL/rest/api/2/project" | node -e "process.stdin.on('data',d=>JSON.parse(d).forEach(p=>console.log(JSON.stringify({key:p.key,name:p.name}))))"
-```
+Skill(`huahai-workflow-gf`) / `/huahai-workflow-gf` → 7。分批修：全部推完再交测。
 
-匹配：key+名称大小写不敏感；0→修正；多→用户选。
+### 7. 交测回写
 
-**JQL 强制前缀：** `assignee = currentUser() AND resolution = Unresolved`  
-再追加：`project in (PROJ)` → `updated >= -Nd` → `text ~ "keyword"` → `ORDER BY priority ASC, updated DESC`。默认 `updated >= -14d`。
+总结改动。缺 `JIRA_TESTER` → 要显示名并写 User+`$env:`。自动匹配「修复待验证」/「待验证」/「测试」并 POST；再 `assignable/search?query=` → PUT assignee。仅匹配失败或非 200/204 才问人。
 
-3. 搜索展示最多 4 个候选：
-
-```bash
-curl ... -X POST "$JIRA_BASE_URL/rest/api/2/search" -d '{"jql":"<JQL>","maxResults":20,"fields":["summary","status","priority","issuetype","created","updated","project"]}'
-```
-
-表格：`key / summary / status / priority`；选定后再拉详情。
-
-**获取详情：**
-
-```bash
-curl ... "$JIRA_BASE_URL/rest/api/2/issue/ISSUE_KEY?fields=summary,description,status,priority,issuetype,assignee,reporter,comment,subtasks,issuelinks,attachment,labels,components"
-```
-
-展示：标题、状态/优先级/类型、描述、最近 5 条评论、子任务/关联、标签/组件。wiki markup 转可读文本。
-
-### 3. 影响分析与修复方案
-
-1. `git remote -v`：当前目录是仓库优先用；否则让用户给路径
-2. 关键词 Grep → Glob → 调用链 → 测试覆盖
-3. 输出：可能根因、影响范围、修改点、风险、测试缺口、复杂度
-
-只查看 → 结束。要修复 → 只出计划不改代码则停；否则进步骤 4。
-
-### 4. 开始编码 → 状态 = 处理中
-
-```bash
-curl ... "$JIRA_BASE_URL/rest/api/2/issue/ISSUE_KEY/transitions" | node -e "process.stdin.on('data',d=>JSON.parse(d).transitions.forEach(t=>console.log(JSON.stringify({id:t.id,name:t.name}))))"
-```
-
-模糊匹配「处理中」/ In Progress / 进行中 → **向用户确认** → POST（204 无 body，勿 pipe node）：
-
-```bash
-curl ... -w "%{http_code}" -X POST "$JIRA_BASE_URL/rest/api/2/issue/ISSUE_KEY/transitions" -d '{"transition":{"id":"ID"}}'
-```
-
-匹配不到 → 列全部状态让用户选。确认并流转成功后再写业务代码。
-
-### 5. 代码审查（推送前）
-
-读并遵循 [pre-push-review.md](../huahai-workflow/references/pre-push-review.md)。验收依据 = issue 描述与验收点。
-
-若该文件不可用：有审查 skill 则调用；否则自审验收/逻辑/安全（密钥与注入）；或用户跳过后进步骤 6。
-
-### 6. 推送 → /huahai-workflow-gf
-
-审查通过或已跳过 → Skill(`huahai-workflow-gf`) 或 `/huahai-workflow-gf`。完成后进步骤 7。分批修复时：全部推送后再统一交测。
-
-### 7. 交测回写 → 修复待验证 + `$JIRA_TESTER`
-
-先总结：文件、问题、测试结果、未覆盖风险。缺 `JIRA_TESTER` → 分配前向用户要显示名；Agent 写入 User + `$env:`（同步骤 1a）。
-
-**流转（自动）**：GET transitions → 匹配「修复待验证」/「待验证」/「测试」→ 直接 POST；失败才列状态让用户选。
-
-**分配（自动）**：
-
-```bash
-curl ... --get --data-urlencode "issueKey=ISSUE_KEY" --data-urlencode "query=$JIRA_TESTER" "$JIRA_BASE_URL/rest/api/2/user/assignable/search"
-```
-
-唯一匹配后 PUT `assignee`；仅缺测试人、状态/用户匹配失败、非 200/204 时才问用户。
-
-## 错误处理
+## 错误速查
 
 | 场景 | 处理 |
 |------|------|
-| 缺 URL/TOKEN | 步骤 1a 停下索取；Agent 写 User 环境变量 + 会话 `$env:` |
-| 401/403 | 换 token，同样持久化到 User 后重试 |
-| 网络/地址 | VPN；更新 BASE_URL |
-| 缺 TESTER | 步骤 7 前再问 |
-| 未提供项目 / 无匹配 / 多匹配 | 补项目；修正；用户选 |
-| 未提供时间窗 | 默认 14d |
-| 搜索无结果 | 展示条件，建议放宽 |
-| 步骤4 未确认 | 不执行写操作 |
-| 步骤7 失败 | 报告并询问 |
-| 只分析不改代码 | 步骤 3 后结束，不写业务代码 |
+| 缺配置 / 401 | 1a 索取或换 Token，写 User |
+| 网络/地址 | VPN；改 URL |
+| 项目无/多匹配、无搜索结果 | 修正/用户选；放宽条件 |
+| 步骤4 未确认 | 不写代码 |
+| 步骤7 失败 | 报告并问 |
