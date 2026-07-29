@@ -12,7 +12,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 **按需读取**（勿一次全载）：
 - [defaults.md](references/defaults.md) — doc_root / 目录约定
 - [todolist.md](references/todolist.md) — 元信息、生命周期、初始形态
-- [recovery.md](references/recovery.md) — Integrity、损坏恢复、自检
+- [recovery.md](references/recovery.md) — Integrity、损坏恢复、完整状态表模板、自检
 - [pre-push-review.md](references/pre-push-review.md) — 推送前审查（权威）
 - [archive.md](references/archive.md) — 归档对齐与搬移（权威）
 
@@ -42,29 +42,15 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 
 ## 进度展示
 
-**默认（每轮末一行即可，勿盖过提问）：**
+**默认（每轮强制，仅此一行，勿盖过提问）：**
 
 `进度：步骤N — <名称> · <待确认或下一步一句话>`
 
 例：`进度：启动 · 待确认 doc_root（推荐 yqsz/docs/grillme）→ 确认后建目录再进步骤1`
 
-**完整表（仅下列时刻强制）：** 编码前 CHECKPOINT、Integrity 失败、用户跳过、步骤4完成停住、会话恢复/损坏修复。子 skill 不可用、ADR=0、待可写补建等 → 写进该行或当时展开的表即可，不必每轮全表。
+**禁止**在普通追问 / 确认目录轮粘贴完整状态表。
 
-```markdown
----
-## Workflow 状态
-
-| 项 | 内容 |
-|----|------|
-| 当前步骤 | 步骤 N — \<名称\> |
-| doc_root | \<路径\> |
-| 本步产出 | \<文件路径列表，无则「无」\> |
-| ADR | \<路径或无 — 无时写原因\> |
-| 已跳过 | \<步骤 + 原因；无则「无」\> |
-| 待你确认 | \<CHECKPOINT / 例外停顿；无则「无」\> |
-| 下一步 | \<具体动作；步骤4 完成后用上方固定提示\> |
----
-```
+**完整表**：仅编码前 CHECKPOINT、Integrity 失败、用户跳过、步骤4完成停住、会话恢复/损坏修复时展开；模板见 [recovery.md](references/recovery.md)#完整状态表模板。子 skill 不可用、ADR=0、待可写补建 → 写进进度行即可。
 
 ---
 
