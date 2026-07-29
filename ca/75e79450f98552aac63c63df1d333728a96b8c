@@ -1,0 +1,26 @@
+skills/huahai-workflow/references/archive.md
+  b97b833dd03904a6 11
+skills/huahai-workflow/references/recovery.md
+  b97b833dd03904a6 5,22,28,31,40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "ca75e79450f98552aac63c63df1d333728a96b8c",
+  "prompts": {
+    "b97b833dd03904a6": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "f7f06901-f485-40d2-928e-4b0de8f10cc8",
+        "model": "default"
+      },
+      "human_author": "huahai",
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 6,
+      "accepted_lines": 6,
+      "overriden_lines": 0,
+      "messages_url": "https://git-ai.hsjdata.com/cas/8823dcfa36eef8e20c2faa251655115959d18312cbbc0a79e68e61b0a353054b"
+    }
+  }
+}
