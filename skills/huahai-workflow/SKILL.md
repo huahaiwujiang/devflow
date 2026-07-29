@@ -20,7 +20,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 
 ## 核心原则
 
-1. **可观测性**：每轮附「Workflow 状态报告」；禁止产物文件不存在时写 todolist 元信息或勾选。
+1. **可观测性**：进度真相在 todolist + 磁盘产物（禁止产物不存在时写元信息或勾选）。回复默认**一行进度**；完整状态表仅门禁时刻展开（见下）。
 2. **防跳步**：步骤1–3 + 编码前 CHECKPOINT 不可跳过；步骤2→3 串联不问；簿记自动落盘。
 3. **发布与归档解耦**：`/huahai-workflow-gf` 不暗含归档；归档不要求已 push；同一句提示词写明才联动。
 4. **与 issue 分流**：`PROJ-123` / 修缺陷 / `/huahai-workflow-issue` → Skill(`huahai-workflow-issue`)，本流程不做 grilling→spec→tickets。
@@ -34,13 +34,21 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 | **自动挡** | 1 → 2–3 串联 → 编码前 CHECKPOINT → 4 | `/huahai-workflow`、实现需求、确认写代码 |
 | **手动挡** | 5 审查 → 6 发布 → 7 归档 | 用户显式：发布/推送/`/huahai-workflow-gf`/归档；审查随发布触发 |
 
-自动挡终点 = 步骤4 全部 `[x]` 且验证通过 → **停住**，不自动 commit/push/归档。状态报告「下一步」固定：
+自动挡终点 = 步骤4 全部 `[x]` 且验证通过 → **停住**，不自动 commit/push/归档。停住时「下一步」固定：
 
 > 编码已完成。请先自行查看变更。发布请说 `/huahai-workflow-gf` 或「发布」（默认先审查再推送，可说「跳过审查」；加「归档」则推送后一并归档），仅归档请说「归档」。
 
 ---
 
-## Workflow 状态报告（每轮强制）
+## 进度展示
+
+**默认（每轮末一行即可，勿盖过提问）：**
+
+`进度：步骤N — <名称> · <待确认或下一步一句话>`
+
+例：`进度：启动 · 待确认 doc_root（推荐 yqsz/docs/grillme）→ 确认后建目录再进步骤1`
+
+**完整表（仅下列时刻强制）：** 编码前 CHECKPOINT、Integrity 失败、用户跳过、步骤4完成停住、会话恢复/损坏修复。子 skill 不可用、ADR=0、待可写补建等 → 写进该行或当时展开的表即可，不必每轮全表。
 
 ```markdown
 ---
@@ -50,7 +58,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 |----|------|
 | 当前步骤 | 步骤 N — \<名称\> |
 | doc_root | \<路径\> |
-| 本步产出 | \<文件路径列表，无则写「无」\> |
+| 本步产出 | \<文件路径列表，无则「无」\> |
 | ADR | \<路径或无 — 无时写原因\> |
 | 已跳过 | \<步骤 + 原因；无则「无」\> |
 | 待你确认 | \<CHECKPOINT / 例外停顿；无则「无」\> |
@@ -88,11 +96,11 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 检查能否加载 mattpocock-skills 的 grilling / to-spec / to-tickets / tdd。
 
 - 可加载 → 优先子 skill
-- 不可用 → 不阻塞；状态报告写「手搓」；仍按门禁落盘推进
+- 不可用 → 不阻塞；进度行注明「手搓」；仍按门禁落盘推进
 
 ### 2. doc_root（独立回合）
 
-读 [defaults.md](references/defaults.md)，列出选项等确认；确认后建四子目录。禁止写盘时仍先确认，状态报告注明待可写后补建。
+读 [defaults.md](references/defaults.md)，列出选项等确认；确认后建四子目录。禁止写盘时仍先确认，进度行注明待可写后补建。
 
 ### 3. 读 todolist.md（项目根）
 
@@ -132,7 +140,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 - 伴随：Skill(`domain-modeling`) 或手写 CONTEXT。ADR 仅当：难逆转 + 缺上下文会惊讶 + 真实权衡
 - 产出：项目根 `CONTEXT.md`（仅业务 WHAT；禁止 API/分包/表结构；已存在则追加）。`<doc_root>/adr/` 0~N
 - 推进：范围确认后自动更新 CONTEXT → `context:` + 阶段→2 → **立即步骤2**
-- 快速通道：1 轮范围确认即可；ADR 可为 0（状态报告说明）
+- 快速通道：1 轮范围确认即可；ADR 可为 0（进度行或门禁表说明）
 
 ### 步骤2: 设计（HOW）
 
@@ -154,7 +162,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 ### 步骤4: 编码（自动挡终点）
 
 - 执行：Skill(`tdd`) 或 red-green / build 验证
-- 前置：CHECKPOINT + Integrity 通过（结果写入状态报告）
+- 前置：CHECKPOINT + Integrity 通过（结果写入当轮完整状态表）
 - 每票：确认测试缝 → 实现验证 → `[x]`（遵依赖）
 - 禁止 commit/push；全 `[x]` 后停住
 

@@ -2,7 +2,7 @@
 
 ## Integrity 校验（步骤4 编码前必跑）
 
-读取 todolist.md 元信息，**逐项验证文件存在**，在状态报告写「Integrity：通过」或列出失败项：
+读取 todolist.md 元信息，**逐项验证文件存在**，在**完整状态表**写「Integrity：通过」或列出失败项：
 
 ```
 project_root 目录存在（CONTEXT.md / todolist.md 在此，不在 doc_root）
@@ -19,16 +19,16 @@ tickets_root 目录存在且含 ≥1 个 .md
 1. 跑 Integrity，列出缺失项
 2. 按优先级推断真实进度：`tickets/*.md` 且阶段≥步骤4 → 步骤4+；`tickets/*.md` 且阶段仍为步骤3 → **编码前 CHECKPOINT**；`specs/*.md` → 步骤3；`CONTEXT.md` 或 `adr/*.md` → 步骤2+；否则 → 步骤1
 3. **重建 todolist**（删虚假元信息），从推断步骤继续
-4. 状态报告「已跳过」写「上次 workflow 损坏已修复」
+4. 展开完整状态表，「已跳过」写「上次 workflow 损坏已修复」
 
 ## 自检清单
 
 ### 编码前
 
-- [ ] 本轮末尾已附 Workflow 状态报告
+- [ ] 本轮为 CHECKPOINT / Integrity 时已附**完整状态表**；普通追问轮仅一行进度
 - [ ] doc_root 四目录已存在
 - [ ] CONTEXT.md / todolist.md 在项目根，**未**误入 doc_root
-- [ ] Integrity 已跑并写入状态报告
+- [ ] Integrity 已跑并写入完整状态表
 - [ ] spec 与 tickets 已落盘；todolist 任务来自票文件
 - [ ] 编码前 CHECKPOINT 整包已展示且用户已确认
 - [ ] CONTEXT 无 API/路径等技术 HOW
@@ -37,7 +37,7 @@ tickets_root 目录存在且含 ≥1 个 .md
 ### 步骤4 结束后
 
 - [ ] **未**自动 commit / push / 归档
-- [ ] 已停住并提示：查看变更 → 发布（先审查再 `/huahai-workflow-gf`）/ 「归档」
+- [ ] 已停住并附完整状态表；提示：查看变更 → 发布（先审查再 `/huahai-workflow-gf`）/ 「归档」
 
 ### 发布前（步骤5–6）
 
