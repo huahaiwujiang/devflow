@@ -46,7 +46,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 
 `进度：步骤N — <名称> · <待确认或下一步一句话>`
 
-例：`进度：启动 · 待确认 doc_root（推荐 yqsz/docs/grillme）→ 确认后建目录再进步骤1`
+例：`进度：启动 · 待确认 doc_root（推荐 yqsz/docs/grillme）`
 
 **禁止**在普通追问 / 确认目录轮粘贴完整状态表。
 
@@ -75,7 +75,9 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 
 ## 启动决策树（读到本 skill 后第一件事）
 
-> **回合纪律**：每个需确认的决策独占一回合。doc_root：先确认目录 → 再建目录/更新 todolist → **下一回合**才步骤1 第一问。禁止「确认目录 + 第一问」合并。
+> **回合纪律**：
+> - **展示** doc_root 选项时：本回合只确认目录，**禁止**同回合抛步骤1 第一问。
+> - **用户已确认** doc_root 后：同一回复内立刻建四子目录、写/重置 todolist → **紧接着步骤1 第一问**。禁止再停住要用户回「继续」。
 
 ### 1. 依赖检查（<1s）
 
@@ -84,9 +86,9 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 - 可加载 → 优先子 skill
 - 不可用 → 不阻塞；进度行注明「手搓」；仍按门禁落盘推进
 
-### 2. doc_root（独立回合）
+### 2. doc_root（展示选项时独立停顿）
 
-读 [defaults.md](references/defaults.md)，列出选项等确认；确认后建四子目录。禁止写盘时仍先确认，进度行注明待可写后补建。
+读 [defaults.md](references/defaults.md)，列出选项等确认。用户确认后：**本回复内**建四子目录 + 初始 todolist + 步骤1 第一问（grilling）。禁止写盘时仍先确认，进度行注明待可写后补建，可写后同一回复内补建并直接第一问。
 
 ### 3. 读 todolist.md（项目根）
 
