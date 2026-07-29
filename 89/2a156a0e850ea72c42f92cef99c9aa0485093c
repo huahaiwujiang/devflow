@@ -1,0 +1,24 @@
+skills/huahai-workflow/SKILL.md
+  b97b833dd03904a6 49,78-80,89,91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "892a156a0e850ea72c42f92cef99c9aa0485093c",
+  "prompts": {
+    "b97b833dd03904a6": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "f7f06901-f485-40d2-928e-4b0de8f10cc8",
+        "model": "default"
+      },
+      "human_author": "huahai",
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 4,
+      "accepted_lines": 6,
+      "overriden_lines": 0,
+      "messages_url": "https://git-ai.hsjdata.com/cas/6f046b9cbfbcc5d6f6057e45cf79998599a74dd8c2fe42c87f621a4f87b56f3e"
+    }
+  }
+}
