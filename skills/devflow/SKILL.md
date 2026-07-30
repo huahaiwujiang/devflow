@@ -12,7 +12,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 **按需读取**（勿一次全载）：
 - [defaults.md](references/defaults.md) — doc_root / 目录约定
 - [todolist.md](references/todolist.md) — 元信息、生命周期、初始形态
-- [recovery.md](references/recovery.md) — Integrity、损坏恢复、完整状态表模板、自检
+- [recovery.md](references/recovery.md) — 产物完整性、编码授权、损坏恢复、状态矩阵与自检
 - [pre-push-review.md](references/pre-push-review.md) — 推送前审查（权威）
 - [archive.md](references/archive.md) — 归档对齐与搬移（权威）
 
@@ -20,7 +20,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 
 ## 核心原则
 
-1. **可观测性**：进度真相在 todolist + 磁盘产物（禁止产物不存在时写元信息或勾选）。回复默认**一行进度**；完整状态表仅门禁时刻展开（见下）。
+1. **可观测性**：进度真相依次为 todolist 指针、枚举所得磁盘产物、本轮实时 git 状态；会话注入的历史快照仅作提示（禁止产物不存在时写元信息或勾选）。回复默认**一行进度**；完整状态表仅门禁时刻展开（见下）。
 2. **防跳步**：步骤1–3 + 编码前 CHECKPOINT 不可跳过；步骤2→3 串联不问；簿记自动落盘。
 3. **发布与归档解耦**：`/devflow-publish` 不暗含归档；归档不要求已 push；同一句提示词写明才联动。**含归档时一律先归档再提交/推送**（不论用户语序）。
 4. **与 issue 分流**：`PROJ-123` / 修缺陷 / `/devflow-issue` → Skill(`devflow-issue`)，本流程不做 grilling→spec→tickets。
@@ -34,7 +34,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 | **自动挡** | 1 → 2–3 串联 → 编码前 CHECKPOINT → 4 | `/devflow`、实现需求、确认写代码 |
 | **手动挡** | 5 审查 → 6 发布 → 7 归档 | 用户显式：发布/推送/`/devflow-publish`/归档；审查随发布触发 |
 
-自动挡终点 = 步骤4 全部 `[x]` 且验证通过 → **停住**，不自动 commit/push/归档。停住时「下一步」固定：
+自动挡终点 = 步骤4 全部 `[x]` 且验证通过。若本轮没有显式发布/归档意图 → **停住**，不自动 commit/push/归档；若本轮已显式要求则转手动挡。停住时「下一步」固定：
 
 > 编码已完成。请先自行查看变更。发布请说 `/devflow-publish` 或「发布」（默认先审查再推送，可说「跳过审查」；加「归档」则**先归档再**提交推送），仅归档请说「归档」。
 
@@ -50,7 +50,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 
 **禁止**在普通追问 / 确认目录轮粘贴完整状态表。
 
-**完整表**：仅编码前 CHECKPOINT、Integrity 失败、用户跳过、步骤4完成停住、会话恢复/损坏修复时展开；模板见 [recovery.md](references/recovery.md)#完整状态表模板。子 skill 不可用、ADR=0、待可写补建 → 写进进度行即可。
+**完整表**：仅编码前 CHECKPOINT、产物完整性失败、用户跳过、步骤4完成停住、会话恢复/损坏修复时展开；模板见 [recovery.md](references/recovery.md)#完整状态表模板。子 skill 不可用、ADR=0、待可写补建 → 写进进度行即可。恢复轮只报告判定结果与下一步，禁止叙述内部试错过程。
 
 ---
 
@@ -66,7 +66,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 | 写入 `- [ ]` | 票文件已创建（任务来自票标题，禁止手写） |
 | `<!-- 阶段: 步骤4 -->` | 🔴 编码前 CHECKPOINT 用户已确认 |
 | 勾选 `- [x]` | 票文件存在 + 验收条件满足 |
-| **写业务代码** | 阶段=步骤4 且 Integrity 通过（见 [recovery.md](references/recovery.md)） |
+| **写业务代码** | 阶段=步骤4（编码授权已获）且产物完整性通过（见 [recovery.md](references/recovery.md)） |
 | 步骤5 审查 | 步骤4 全 `[x]` + 用户显式发布/推送/`/devflow-publish` |
 | 步骤6 发布 | 审查通过 / 可推 / 已跳过 |
 | 步骤7 归档 | 用户显式归档（不要求步骤6 完成） |
@@ -75,37 +75,48 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 
 ## 启动决策树（读到本 skill 后第一件事）
 
-> **回合纪律**：
-> - **已有** `*/docs/grillme` 或可复用 doc_root（含四子目录）→ **不问**，直接复用；本回复内补齐缺失子目录 + 写/重置 todolist → **紧接着步骤1 第一问**。
-> - **无已有目录、须展示选项**时：本回合只确认目录，**禁止**同回合抛步骤1 第一问。
-> - **用户已确认** doc_root 后：同一回复内立刻建四子目录、写/重置 todolist → **紧接着步骤1 第一问**。禁止再停住要用户回「继续」。
+### 0. 先读 todolist.md（唯一首动作）
 
-### 1. 依赖检查（<1s）
+一律先读项目根 `todolist.md`，再做任何依赖检查、doc_root 探测或写盘。用户明确「新任务 / 从头开始」时也先读，以便展示当前任务状态，但不按旧阶段续跑。**有合法 devflow todolist 且用户未明确新开 → 恢复分支；否则 → 新任务分支。**
 
-检查能否加载 mattpocock-skills 的 grilling / to-spec / to-tickets / tdd。
+文件存在但缺少 `project_root` / `doc_root` / `阶段` 任一 devflow 必需元信息 → 视为非 devflow 文件，不覆盖其内容；报告命名冲突，请用户先改名或明确允许替换，再进入新任务分支。
 
-- 可加载 → 优先子 skill
-- 不可用 → 不阻塞；进度行注明「手搓」；仍按门禁落盘推进
+读取 spec / tickets 时，必须先枚举元信息指向的目录，再按枚举结果读取；禁止凭标题或序号猜文件名。读不到先复查枚举结果，不得直接宣告产物缺失。
 
-### 2. doc_root（有则复用，无才问）
+### 1. 恢复分支（有 todolist）
 
-读 [defaults.md](references/defaults.md)：先探测已有 `*/docs/grillme` / todolist 中的 `doc_root` / 四子目录。
+先读 [recovery.md](references/recovery.md)，按 todolist 阶段与磁盘证据唯一分派：
 
-- **可复用** → 不问确认；进度行注明路径；**本回复内**补齐四子目录 + 初始 todolist + 步骤1 第一问
-- **不可复用（无目录）** → 列出选项等确认；用户确认后同一回复内建目录 + todolist + 第一问
-- 禁止写盘时仍先确认，进度行注明待可写后补建，可写后同一回复内补建并直接第一问
+| 阶段 | 磁盘证据 | 本回合动作 |
+|------|----------|------------|
+| 步骤1 | 初始形态合法，且磁盘无本任务 spec / 票 | 继续追问；不重置、不重开 |
+| 步骤2 | context 存在 | 从设计继续 |
+| 步骤3 | spec 存在、票 ≥1 | **正常待确认态：直接展示编码前 CHECKPOINT** |
+| 步骤3 | spec 存在、票为 0 | 只补拆票，再展示 CHECKPOINT |
+| 步骤4 | 有未勾选票 | 产物完整性通过后，从首张未完成票继续编码 |
+| 步骤4 | 全部 `[x]`，本轮无发布/归档意图 | 停住并使用编码完成固定提示 |
+| 步骤4 | 全部 `[x]`，本轮显式发布/推送/归档 | 转手动挡：发布走步骤5→6；含归档则先步骤7再提交推送 |
+| 任一阶段 | 磁盘产物超前于元信息 | 只补元信息；反向推断最高到步骤3，仍须 CHECKPOINT |
+| 任一阶段 | 元信息与磁盘不一致 | 从最早缺失阶段精确修复；不得重做更早的完整产物 |
 
-### 3. 读 todolist.md（项目根）
+有未勾选项不等于一律编码：必须服从 `<!-- 阶段 -->`。步骤3 + 票齐不是损坏，也未获编码授权。
 
-```
-不存在 → 创建初始形态（见 references/todolist.md）→ 步骤1
-存在 + Integrity 失败 → 损坏处理（recovery.md）
-存在 + 「从头开始/新任务」→ 清空，重建步骤1
-存在 + 有未勾选 → 从 <!-- 阶段 --> 继续
-存在 + 全勾选 → 归档→步骤7；发布/`/devflow-publish`→步骤5→6；否则停住提示手动
-```
+用户本轮明确给出另一份需求 / PRD，且与当前 spec 不是同一任务 → 说明当前任务状态并让用户选择续跑或新开；不得静默覆盖 todolist。用户明确「从头开始 / 新任务」→ 进入新任务分支。
 
-会话恢复一律以 todolist 阶段 + 磁盘产物为准。
+### 2. 新任务分支（无 todolist，或用户明确新开）
+
+先检查能否加载 mattpocock-skills 的 grilling / to-spec / to-tickets / tdd（<1s）：可加载则优先子 skill；不可用不阻塞，进度行注明「手搓」。
+
+再读 [defaults.md](references/defaults.md) 探测 doc_root。
+
+若因用户明确「新任务 / 从头开始」进入本分支，先展示当前任务状态；用户意图已明确时不再重复确认，按初始形态重建 todolist，但不得删除或覆盖旧 spec / tickets / 代码产物。
+
+> **回合纪律（仅新任务分支适用）**：
+> - **已有** `*/docs/grillme` 或可复用 doc_root（含四子目录）→ 不问，直接复用；本回复内补齐缺失子目录 + 写初始 todolist → 紧接步骤1第一问。
+> - **无已有目录、须展示选项** → 本回合只确认目录，禁止同回合抛步骤1第一问。
+> - **用户已确认** doc_root → 同一回复内建四子目录、写初始 todolist并直接第一问，禁止再等「继续」。
+
+会话恢复一律以 todolist 阶段 + 枚举所得磁盘产物为准；本轮实时 git 状态只辅助判断代码是否已改，会话开头的历史快照不得推翻前两者。
 
 ---
 
@@ -133,7 +144,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 - 执行：Skill(`grilling`)；否则一次一问+推荐答案，等回复再下一问
 - 伴随：Skill(`domain-modeling`) 或手写 CONTEXT。ADR 仅当：难逆转 + 缺上下文会惊讶 + 真实权衡
 - 产出：项目根 `CONTEXT.md`（仅业务 WHAT；禁止 API/分包/表结构；已存在则追加）。`<doc_root>/adr/` 0~N
-- 推进：范围确认后自动更新 CONTEXT → `context:` + 阶段→2 → **立即步骤2**
+- 推进：范围确认后自动更新 CONTEXT → `task:`（若缺）+ `context:` + 阶段→2 → **立即步骤2**
 - 快速通道：1 轮范围确认即可；ADR 可为 0（进度行或门禁表说明）
 
 ### 步骤2: 设计（HOW）
@@ -156,9 +167,9 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 ### 步骤4: 编码（自动挡终点）
 
 - 执行：Skill(`tdd`) 或 red-green / build 验证
-- 前置：CHECKPOINT + Integrity 通过（结果写入当轮完整状态表）
+- 前置：CHECKPOINT 已确认（阶段=步骤4）+ 产物完整性通过（结果写入当轮完整状态表）
 - 每票：确认测试缝 → 实现验证 → `[x]`（遵依赖）
-- 禁止 commit/push；全 `[x]` 后停住
+- 禁止自动 commit/push；全 `[x]` 且本轮无显式发布/归档意图时停住
 
 ### 步骤5: 代码审查
 
@@ -186,7 +197,8 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 | 「这步做过了」 | **验证文件存在** 才跳过 |
 | 「换个方案」 | 回步骤2 → 串联3 → 新 CHECKPOINT |
 | 「需求变了」 | 回步骤1，todolist 顶部注释 |
-| 会话中断 | todolist + Integrity；票齐且阶段3 → 展示 CHECKPOINT |
+| 会话中断 | 按启动决策树恢复分支唯一分派；禁止重跑已完成阶段 |
+| 用户给出另一份 PRD / 需求 | 若与当前 spec 同任务则续跑；否则展示当前状态并让用户选择续跑或新开 |
 
 ---
 
