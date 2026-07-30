@@ -1,15 +1,15 @@
 ---
-name: huahai-workflow-gf
+name: devflow-publish
 description: >
-  调用 /huahai-workflow-gf，或明确要求提交/推送（如提交并推送、推送代码、git flow）时使用；
+  调用 /devflow-publish，或明确要求提交/推送（如提交并推送、推送代码、git flow）时使用；
   同一句提示词含归档/archive（grillme 产物）时一并归档。不要用于只讨论提交规范或仅查看 diff。
 ---
 
-# Git Flow（huahai-workflow-gf）
+# Git Flow（devflow-publish）
 
 状态 → 暂存 → 提交 → 拉取 → 推送。全程自动，提交信息按变更生成。归档**仅当**本轮提示词写明归档意图。
 
-归档权威步骤：同级安装时读 [`../huahai-workflow/references/archive.md`](../huahai-workflow/references/archive.md)；若不可用，用下文「归档」步骤。
+归档权威步骤：同级安装时读 [`../devflow/references/archive.md`](../devflow/references/archive.md)；若不可用，用下文「归档」步骤。
 
 ---
 
@@ -22,7 +22,7 @@ description: >
 | **含**归档措辞（`归档`、`一并归档`、`发布并归档`、`提交并归档`、`推送并归档`、`archive` 指 workflow 归档） | git 全流程**之后**归档 |
 | **不含** | **只**做 git；**禁止**归档、**禁止**删 `todolist.md` |
 
-不算归档：业务文案「合同归档」等且未要求整理 grillme；单独说「归档」未触发本 skill → 由 `huahai-workflow` 步骤7 / [archive.md](../huahai-workflow/references/archive.md) 处理。
+不算归档：业务文案「合同归档」等且未要求整理 grillme；单独说「归档」未触发本 skill → 由 `devflow` 步骤7 / [archive.md](../devflow/references/archive.md) 处理。
 
 后续步骤一律按此判断，不再重述。
 
@@ -85,7 +85,7 @@ git push origin <当前分支>
 
 前置：开关为是，且步骤 5 推送成功（无代码变更仅归档时，跳过 1–5 中无意义步骤，仍须提示词含归档）。
 
-读并执行 [archive.md](../huahai-workflow/references/archive.md)。若该文件不可用，按下列兜底：
+读并执行 [archive.md](../devflow/references/archive.md)。若该文件不可用，按下列兜底：
 
 1. 从 `todolist.md` 读 `doc_root`（无则用户指定或 `docs/grillme`）
 2. 归档前对齐（as-built / 实际结果）；无偏差写「对齐检查：通过」
@@ -105,7 +105,7 @@ git push origin <当前分支>
 
 | 用户输入 | 执行 |
 |---------|------|
-| `/huahai-workflow-gf` | 仅 git（不归档） |
+| `/devflow-publish` | 仅 git（不归档） |
 | 同上且提到归档 | git + 归档 |
 | `git flow` / 明确提交或推送代码 | 同左；提示词含归档则追加归档 |
 
@@ -114,5 +114,5 @@ git push origin <当前分支>
 ## 注意事项
 
 - 在 git 仓库下执行；需有远程
-- 与 `huahai-workflow` 一致：本 skill **不暗含归档**
-- 入口：`/huahai-workflow-gf` 或 Skill(`huahai-workflow-gf`)
+- 与 `devflow` 一致：本 skill **不暗含归档**
+- 入口：`/devflow-publish` 或 Skill(`devflow-publish`)

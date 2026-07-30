@@ -23,9 +23,9 @@
 | 步骤2 完成 | + `spec:` + 阶段→3（**自动串联步骤3，不问**） | specs/*.md |
 | 步骤3 产物就绪 | + `tickets_root:` + `- [ ]`；**阶段仍为步骤3** | tickets/*.md |
 | 编码前 CHECKPOINT 通过 | 阶段→4 | （同上） |
-| 步骤4 | 逐票 `[x]`；全部勾完仍停在步骤4 | 代码变更（未 commit，除非用户已手动 `/huahai-workflow-gf`） |
+| 步骤4 | 逐票 `[x]`；全部勾完仍停在步骤4 | 代码变更（未 commit，除非用户已手动 `/devflow-publish`） |
 | 步骤5 | （仅用户触发发布）代码审查 | — |
-| 步骤6 | （审查通过/可推/已跳过）`/huahai-workflow-gf` | git push |
+| 步骤6 | （审查通过/可推/已跳过）`/devflow-publish` | git push |
 | 步骤7 | （仅用户触发）对齐 + 删除 todolist | archive/ |
 
 ## 元信息模板

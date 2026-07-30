@@ -1,14 +1,14 @@
 ---
-name: huahai-workflow-issue
+name: devflow-issue
 description: >
-  调用 /huahai-workflow-issue、给出 PROJ-123 类 issue key，或明确要修缺陷/修 bug/看 issue/JQL/项目进度时使用。
-  无工单新特性改用 /huahai-workflow；带 issue key 或修缺陷时不要走 grilling→spec→tickets。
+  调用 /devflow-issue、给出 PROJ-123 类 issue key，或明确要修缺陷/修 bug/看 issue/JQL/项目进度时使用。
+  无工单新特性改用 /devflow；带 issue key 或修缺陷时不要走 grilling→spec→tickets。
 user_invocable: true
 ---
 
-# Issue 任务 Skill（huahai-workflow-issue）
+# Issue 任务 Skill（devflow-issue）
 
-调用：`/huahai-workflow-issue`。无工单新特性 → `/huahai-workflow`。审查权威：[pre-push-review.md](../huahai-workflow/references/pre-push-review.md)。
+调用：`/devflow-issue`。无工单新特性 → `/devflow`。审查权威：[pre-push-review.md](../devflow/references/pre-push-review.md)。
 
 ## 约定
 
@@ -51,11 +51,11 @@ GET transitions → 匹配「处理中」/In Progress → **确认** → POST（
 
 ### 5. 审查
 
-跟 [pre-push-review.md](../huahai-workflow/references/pre-push-review.md)；验收=工单描述/验收点。无文件则：有审查 skill 用 skill，否则自审，或用户跳过→6。
+跟 [pre-push-review.md](../devflow/references/pre-push-review.md)；验收=工单描述/验收点。无文件则：有审查 skill 用 skill，否则自审，或用户跳过→6。
 
 ### 6. 推送
 
-Skill(`huahai-workflow-gf`) / `/huahai-workflow-gf` → 7。分批修：全部推完再交测。
+Skill(`devflow-publish`) / `/devflow-publish` → 7。分批修：全部推完再交测。
 
 ### 7. 交测回写
 

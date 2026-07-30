@@ -1,19 +1,19 @@
-# huahai-workflow
+# devflow
 
 基于 mattpocock 方法论的开发工作流（追问→设计→拆分→编码→审查→发布→归档）。三个 skill **一并安装**。
 
 | Skill | 用途 |
 |-------|------|
-| `huahai-workflow` | 无工单新特性 |
-| `huahai-workflow-gf` | 提交 / 推送（提示词含「归档」则一并归档） |
-| `huahai-workflow-issue` | `PROJ-123` / 修缺陷 / Issue 查修交测 |
+| `devflow` | 无工单新特性 |
+| `devflow-publish` | 提交 / 推送（提示词含「归档」则一并归档） |
+| `devflow-issue` | `PROJ-123` / 修缺陷 / Issue 查修交测 |
 
 ## 安装
 
 复制下面两行即可（本仓库三个 skill + 主流程依赖 mattpocock-skills）：
 
 ```bash
-npx skills@latest add huahaiwujiang/huahai-workflow --skill '*' -y
+npx skills@latest add huahaiwujiang/devflow --skill '*' -y
 npx skills@latest add mattpocock/skills -y
 ```
 
@@ -23,9 +23,9 @@ mattpocock 装不上也不阻塞：主流程会手搓兜底。Issue：`JIRA_BASE
 
 ## 使用
 
-- `/huahai-workflow` — 新特性
-- `/huahai-workflow-gf` — 发布
-- `/huahai-workflow-issue` / `PROJ-123` — 缺陷
+- `/devflow` — 新特性
+- `/devflow-publish` — 发布
+- `/devflow-issue` / `PROJ-123` — 缺陷
 
 进度在项目根 `todolist.md`；文档默认 `docs/grillme`（`adr` / `specs` / `tickets` / `archive`）。
 

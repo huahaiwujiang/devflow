@@ -1,8 +1,8 @@
 ---
-name: huahai-workflow
+name: devflow
 description: >
-  无工单的新特性 / 开发任务 / 要做某个功能，或调用 /huahai-workflow 时使用（含想跳过直接写代码、检查依赖、setup）。
-  不要用于 PROJ-123、明确修缺陷或 /huahai-workflow-issue；不要用于仅提交/推送（/huahai-workflow-gf）。
+  无工单的新特性 / 开发任务 / 要做某个功能，或调用 /devflow 时使用（含想跳过直接写代码、检查依赖、setup）。
+  不要用于 PROJ-123、明确修缺陷或 /devflow-issue；不要用于仅提交/推送（/devflow-publish）。
 ---
 
 # 开发工作流
@@ -22,8 +22,8 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 
 1. **可观测性**：进度真相在 todolist + 磁盘产物（禁止产物不存在时写元信息或勾选）。回复默认**一行进度**；完整状态表仅门禁时刻展开（见下）。
 2. **防跳步**：步骤1–3 + 编码前 CHECKPOINT 不可跳过；步骤2→3 串联不问；簿记自动落盘。
-3. **发布与归档解耦**：`/huahai-workflow-gf` 不暗含归档；归档不要求已 push；同一句提示词写明才联动。
-4. **与 issue 分流**：`PROJ-123` / 修缺陷 / `/huahai-workflow-issue` → Skill(`huahai-workflow-issue`)，本流程不做 grilling→spec→tickets。
+3. **发布与归档解耦**：`/devflow-publish` 不暗含归档；归档不要求已 push；同一句提示词写明才联动。
+4. **与 issue 分流**：`PROJ-123` / 修缺陷 / `/devflow-issue` → Skill(`devflow-issue`)，本流程不做 grilling→spec→tickets。
 
 ---
 
@@ -31,12 +31,12 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 
 | 挡位 | 范围 | 何时 |
 |------|------|------|
-| **自动挡** | 1 → 2–3 串联 → 编码前 CHECKPOINT → 4 | `/huahai-workflow`、实现需求、确认写代码 |
-| **手动挡** | 5 审查 → 6 发布 → 7 归档 | 用户显式：发布/推送/`/huahai-workflow-gf`/归档；审查随发布触发 |
+| **自动挡** | 1 → 2–3 串联 → 编码前 CHECKPOINT → 4 | `/devflow`、实现需求、确认写代码 |
+| **手动挡** | 5 审查 → 6 发布 → 7 归档 | 用户显式：发布/推送/`/devflow-publish`/归档；审查随发布触发 |
 
 自动挡终点 = 步骤4 全部 `[x]` 且验证通过 → **停住**，不自动 commit/push/归档。停住时「下一步」固定：
 
-> 编码已完成。请先自行查看变更。发布请说 `/huahai-workflow-gf` 或「发布」（默认先审查再推送，可说「跳过审查」；加「归档」则推送后一并归档），仅归档请说「归档」。
+> 编码已完成。请先自行查看变更。发布请说 `/devflow-publish` 或「发布」（默认先审查再推送，可说「跳过审查」；加「归档」则推送后一并归档），仅归档请说「归档」。
 
 ---
 
@@ -67,7 +67,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 | `<!-- 阶段: 步骤4 -->` | 🔴 编码前 CHECKPOINT 用户已确认 |
 | 勾选 `- [x]` | 票文件存在 + 验收条件满足 |
 | **写业务代码** | 阶段=步骤4 且 Integrity 通过（见 [recovery.md](references/recovery.md)） |
-| 步骤5 审查 | 步骤4 全 `[x]` + 用户显式发布/推送/`/huahai-workflow-gf` |
+| 步骤5 审查 | 步骤4 全 `[x]` + 用户显式发布/推送/`/devflow-publish` |
 | 步骤6 发布 | 审查通过 / 可推 / 已跳过 |
 | 步骤7 归档 | 用户显式归档（不要求步骤6 完成） |
 
@@ -97,7 +97,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 存在 + Integrity 失败 → 损坏处理（recovery.md）
 存在 + 「从头开始/新任务」→ 清空，重建步骤1
 存在 + 有未勾选 → 从 <!-- 阶段 --> 继续
-存在 + 全勾选 → 归档→步骤7；发布/`/huahai-workflow-gf`→步骤5→6；否则停住提示手动
+存在 + 全勾选 → 归档→步骤7；发布/`/devflow-publish`→步骤5→6；否则停住提示手动
 ```
 
 会话恢复一律以 todolist 阶段 + 磁盘产物为准。
@@ -119,7 +119,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 ```
 步骤1 追问 → 步骤2 设计 ⇄ 步骤3 拆分（串联不问）
 → 🔴 编码前 CHECKPOINT → 步骤4 编码（自动挡终点）
-── 手动 ── 步骤5 审查 → 步骤6 发布（`/huahai-workflow-gf`）→ 步骤7 归档
+── 手动 ── 步骤5 审查 → 步骤6 发布（`/devflow-publish`）→ 步骤7 归档
 ```
 
 ### 步骤1: 追问（WHAT）
@@ -160,11 +160,11 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 
 ### 步骤6: 发布
 
-用户显式发布 / `/huahai-workflow-gf` → Skill(`huahai-workflow-gf`)。提示词同时提归档时由该 skill 在推送后归档。
+用户显式发布 / `/devflow-publish` → Skill(`devflow-publish`)。提示词同时提归档时由该 skill 在推送后归档。
 
 ### 步骤7: 归档
 
-用户显式「归档」（或经 `/huahai-workflow-gf` 且提示词含归档）。读并遵循 [archive.md](references/archive.md)。不要求步骤6 已单独完成。
+用户显式「归档」（或经 `/devflow-publish` 且提示词含归档）。读并遵循 [archive.md](references/archive.md)。不要求步骤6 已单独完成。
 
 ---
 
