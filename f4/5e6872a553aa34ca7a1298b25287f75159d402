@@ -1,0 +1,26 @@
+skills/devflow/references/todolist.md
+  cf4f308cdbf66679 12,16,20-30,37
+skills/devflow/SKILL.md
+  cf4f308cdbf66679 15,23,37,53,69,78,80,82,84,86,88,90-100,102,104-117,119,147,170,172,200-201
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "f45e6872a553aa34ca7a1298b25287f75159d402",
+  "prompts": {
+    "cf4f308cdbf66679": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5d47a2e1-2c33-4f31-9697-267f04372663",
+        "model": "default"
+      },
+      "human_author": "huahai",
+      "messages": [],
+      "total_additions": 65,
+      "total_deletions": 51,
+      "accepted_lines": 57,
+      "overriden_lines": 0,
+      "messages_url": "https://git-ai.hsjdata.com/cas/f2d310c16a8377d859368b94f7314df7495ca373abcbe60594d3ee6ea7cce909"
+    }
+  }
+}
