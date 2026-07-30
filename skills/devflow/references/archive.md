@@ -1,6 +1,8 @@
 # 归档（权威副本）
 
-用于：仅「归档」、或 `/devflow-publish` 提示词含归档且推送成功后。
+用于：仅「归档」、或 `/devflow-publish` 提示词含归档。
+
+**与发布同句时**：只要提示词含归档意图，**必须先归档、再提交/推送**（见 `devflow-publish`），避免先提交代码、再归档、再提交第二轮。
 
 ## 归档前对齐
 
@@ -12,8 +14,10 @@
 
 ## 搬移
 
-1. 从 `todolist.md` 读 `doc_root`（无则用户指定或 `docs/grillme`）
+1. 从 `todolist.md` 读 `doc_root`（无则用户指定或已有 `*/docs/grillme` / `docs/grillme`）
 2. 创建 `<doc_root>/archive/YYYY-MM-DD-<feature>/`（重名则 `-2`、`-3`…）
-3. 移入 `<doc_root>/adr/`、`specs/`、`tickets/` 下当前任务产物（**`CONTEXT.md` 留项目根**）
-4. 删除项目根 `todolist.md`
-5. 若因归档产生入库路径变更，再走一轮 git：暂存 → 提交（`docs: 归档 <feature>`）→ 拉取 → 推送
+3. 将 `<doc_root>/adr/`、`specs/`、`tickets/` 下**当前任务产物文件**移入该归档目录（**`CONTEXT.md` 留项目根**）
+4. **保留**空的 `<doc_root>/adr/`、`specs/`、`tickets/`、`archive/` 四个目录；**禁止** `rmdir` / 删除这四个壳目录（下次启动直接复用，不必再问再建）
+5. 删除项目根 `todolist.md`
+6. 若本轮**仅**归档（未与提交/推送同句）：路径变更再走一轮 git：暂存 → 提交（`docs: 归档 <feature>`）→ 拉取 → 推送  
+   若与提交/推送同句：本步**不单独再提交**；由 `devflow-publish` 在归档完成后统一暂存/提交/推送（含代码与归档路径）

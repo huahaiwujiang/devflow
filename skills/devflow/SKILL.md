@@ -22,7 +22,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 
 1. **可观测性**：进度真相在 todolist + 磁盘产物（禁止产物不存在时写元信息或勾选）。回复默认**一行进度**；完整状态表仅门禁时刻展开（见下）。
 2. **防跳步**：步骤1–3 + 编码前 CHECKPOINT 不可跳过；步骤2→3 串联不问；簿记自动落盘。
-3. **发布与归档解耦**：`/devflow-publish` 不暗含归档；归档不要求已 push；同一句提示词写明才联动。
+3. **发布与归档解耦**：`/devflow-publish` 不暗含归档；归档不要求已 push；同一句提示词写明才联动。**含归档时一律先归档再提交/推送**（不论用户语序）。
 4. **与 issue 分流**：`PROJ-123` / 修缺陷 / `/devflow-issue` → Skill(`devflow-issue`)，本流程不做 grilling→spec→tickets。
 
 ---
@@ -36,7 +36,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 
 自动挡终点 = 步骤4 全部 `[x]` 且验证通过 → **停住**，不自动 commit/push/归档。停住时「下一步」固定：
 
-> 编码已完成。请先自行查看变更。发布请说 `/devflow-publish` 或「发布」（默认先审查再推送，可说「跳过审查」；加「归档」则推送后一并归档），仅归档请说「归档」。
+> 编码已完成。请先自行查看变更。发布请说 `/devflow-publish` 或「发布」（默认先审查再推送，可说「跳过审查」；加「归档」则**先归档再**提交推送），仅归档请说「归档」。
 
 ---
 
@@ -46,7 +46,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 
 `进度：步骤N — <名称> · <待确认或下一步一句话>`
 
-例：`进度：启动 · 待确认 doc_root（推荐 yqsz/docs/grillme）`
+例：`进度：启动 · 复用 doc_root=docs/grillme` 或（无已有目录时）`待确认 doc_root（推荐 docs/grillme）`
 
 **禁止**在普通追问 / 确认目录轮粘贴完整状态表。
 
@@ -76,7 +76,8 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 ## 启动决策树（读到本 skill 后第一件事）
 
 > **回合纪律**：
-> - **展示** doc_root 选项时：本回合只确认目录，**禁止**同回合抛步骤1 第一问。
+> - **已有** `*/docs/grillme` 或可复用 doc_root（含四子目录）→ **不问**，直接复用；本回复内补齐缺失子目录 + 写/重置 todolist → **紧接着步骤1 第一问**。
+> - **无已有目录、须展示选项**时：本回合只确认目录，**禁止**同回合抛步骤1 第一问。
 > - **用户已确认** doc_root 后：同一回复内立刻建四子目录、写/重置 todolist → **紧接着步骤1 第一问**。禁止再停住要用户回「继续」。
 
 ### 1. 依赖检查（<1s）
@@ -86,9 +87,13 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 - 可加载 → 优先子 skill
 - 不可用 → 不阻塞；进度行注明「手搓」；仍按门禁落盘推进
 
-### 2. doc_root（展示选项时独立停顿）
+### 2. doc_root（有则复用，无才问）
 
-读 [defaults.md](references/defaults.md)，列出选项等确认。用户确认后：**本回复内**建四子目录 + 初始 todolist + 步骤1 第一问（grilling）。禁止写盘时仍先确认，进度行注明待可写后补建，可写后同一回复内补建并直接第一问。
+读 [defaults.md](references/defaults.md)：先探测已有 `*/docs/grillme` / todolist 中的 `doc_root` / 四子目录。
+
+- **可复用** → 不问确认；进度行注明路径；**本回复内**补齐四子目录 + 初始 todolist + 步骤1 第一问
+- **不可复用（无目录）** → 列出选项等确认；用户确认后同一回复内建目录 + todolist + 第一问
+- 禁止写盘时仍先确认，进度行注明待可写后补建，可写后同一回复内补建并直接第一问
 
 ### 3. 读 todolist.md（项目根）
 
@@ -119,7 +124,8 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 ```
 步骤1 追问 → 步骤2 设计 ⇄ 步骤3 拆分（串联不问）
 → 🔴 编码前 CHECKPOINT → 步骤4 编码（自动挡终点）
-── 手动 ── 步骤5 审查 → 步骤6 发布（`/devflow-publish`）→ 步骤7 归档
+── 手动 ── 步骤5 审查 → 步骤6 发布（`/devflow-publish`）
+           步骤7 归档（可单独；与发布同句则先于提交/推送）
 ```
 
 ### 步骤1: 追问（WHAT）
@@ -160,11 +166,11 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 
 ### 步骤6: 发布
 
-用户显式发布 / `/devflow-publish` → Skill(`devflow-publish`)。提示词同时提归档时由该 skill 在推送后归档。
+用户显式发布 / `/devflow-publish` → Skill(`devflow-publish`)。提示词同时提归档时由该 skill **先归档再**提交/推送（一次推完；不论用户语序）。
 
 ### 步骤7: 归档
 
-用户显式「归档」（或经 `/devflow-publish` 且提示词含归档）。读并遵循 [archive.md](references/archive.md)。不要求步骤6 已单独完成。
+用户显式「归档」（或经 `/devflow-publish` 且提示词含归档）。读并遵循 [archive.md](references/archive.md)。不要求步骤6 已单独完成。归档只搬文件，**保留** `adr/`、`specs/`、`tickets/`、`archive/` 空目录。
 
 ---
 

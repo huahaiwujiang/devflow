@@ -25,8 +25,8 @@
 | 编码前 CHECKPOINT 通过 | 阶段→4 | （同上） |
 | 步骤4 | 逐票 `[x]`；全部勾完仍停在步骤4 | 代码变更（未 commit，除非用户已手动 `/devflow-publish`） |
 | 步骤5 | （仅用户触发发布）代码审查 | — |
-| 步骤6 | （审查通过/可推/已跳过）`/devflow-publish` | git push |
-| 步骤7 | （仅用户触发）对齐 + 删除 todolist | archive/ |
+| 步骤6 | （审查通过/可推/已跳过）`/devflow-publish`；提示词含归档则**先**步骤7再 git | git push（含归档路径时一次推完） |
+| 步骤7 | （仅用户触发，或与发布同句且**先于**提交）对齐 + 删 todolist；**保留**四空目录 | archive/YYYY-MM-DD-*/；adr/specs/tickets/archive 壳保留 |
 
 ## 元信息模板
 
