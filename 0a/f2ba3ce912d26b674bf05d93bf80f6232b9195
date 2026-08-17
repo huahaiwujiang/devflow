@@ -1,0 +1,28 @@
+README.md
+  424ae09d6e51b2a6 3,7-8,20
+CLAUDE.md
+  424ae09d6e51b2a6 7,12-20,23,31
+skills/devflow/SKILL.md
+  424ae09d6e51b2a6 18,54,109,145-146,153,161,170,210
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "0af2ba3ce912d26b674bf05d93bf80f6232b9195",
+  "prompts": {
+    "424ae09d6e51b2a6": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5bea6190-238a-4d74-8acc-86cf2dc42144",
+        "model": "grok-4.6"
+      },
+      "human_author": "huahai",
+      "messages": [],
+      "total_additions": 80,
+      "total_deletions": 92,
+      "accepted_lines": 26,
+      "overriden_lines": 0,
+      "messages_url": "https://git-ai.hsjdata.com/cas/ee76aaf29b77673be8f09de1d53c15cc56e1d0addc536bb661a7831d4a4ac144"
+    }
+  }
+}
