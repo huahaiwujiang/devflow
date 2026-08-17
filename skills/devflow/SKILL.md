@@ -15,6 +15,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 - [recovery.md](references/recovery.md) — 产物完整性、编码授权、损坏恢复、状态矩阵与自检
 - [pre-push-review.md](references/pre-push-review.md) — 推送前审查（权威）
 - [archive.md](references/archive.md) — 归档对齐与搬移（权威）
+- 步骤1–4 模块（缺文件则手搓）：独立 skill `grilling`；本目录 [domain-modeling/SKILL.md](domain-modeling/SKILL.md)、[to-spec/SKILL.md](to-spec/SKILL.md)、[to-tickets/SKILL.md](to-tickets/SKILL.md)、[tdd/SKILL.md](tdd/SKILL.md)
 
 ---
 
@@ -50,7 +51,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 
 **禁止**在普通追问 / 确认目录轮粘贴完整状态表。
 
-**完整表**：仅编码前 CHECKPOINT、产物完整性失败、用户跳过、步骤4完成停住、会话恢复/损坏修复时展开；模板见 [recovery.md](references/recovery.md)#完整状态表模板。子 skill 不可用、ADR=0、待可写补建 → 写进进度行即可。恢复轮只报告判定结果与下一步，禁止叙述内部试错过程。
+**完整表**：仅编码前 CHECKPOINT、产物完整性失败、用户跳过、步骤4完成停住、会话恢复/损坏修复时展开；模板见 [recovery.md](references/recovery.md)#完整状态表模板。步骤模块文件缺失、ADR=0、待可写补建 → 写进进度行即可。恢复轮只报告判定结果与下一步，禁止叙述内部试错过程。
 
 ---
 
@@ -105,7 +106,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 
 ### 2. 新任务分支（无 todolist，或用户明确新开）
 
-先检查能否加载 mattpocock-skills 的 grilling / to-spec / to-tickets / tdd（<1s）：可加载则优先子 skill；不可用不阻塞，进度行注明「手搓」。
+步骤1 用独立 skill `grilling`，领域词与步骤2–4 模块在本目录内（`domain-modeling/`、`to-spec/`、`to-tickets/`、`tdd/`），按相对路径读取；缺文件或 `grilling` 不可用不阻塞，进度行注明「手搓」。
 
 再读 [defaults.md](references/defaults.md) 探测 doc_root。
 
@@ -141,15 +142,15 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 
 ### 步骤1: 追问（WHAT）
 
-- 执行：Skill(`grilling`)；否则一次一问+推荐答案，等回复再下一问
-- 伴随：Skill(`domain-modeling`) 或手写 CONTEXT。ADR 仅当：难逆转 + 缺上下文会惊讶 + 真实权衡
+- 执行：Skill(`grilling`) + 读并遵循 [domain-modeling/SKILL.md](domain-modeling/SKILL.md)；`grilling` 不可用则按 frontier 轮次手搓（每轮问齐当前可问的问题，各带推荐答案，等回复再下一轮）
+- 伴随：CONTEXT / ADR 由 domain-modeling 落盘。ADR 仅当：难逆转 + 缺上下文会惊讶 + 真实权衡
 - 产出：项目根 `CONTEXT.md`（仅业务 WHAT；禁止 API/分包/表结构；已存在则追加）。`<doc_root>/adr/` 0~N
 - 推进：范围确认后自动更新 CONTEXT → `task:`（若缺）+ `context:` + 阶段→2 → **立即步骤2**
 - 快速通道：1 轮范围确认即可；ADR 可为 0（进度行或门禁表说明）
 
 ### 步骤2: 设计（HOW）
 
-- 执行：Skill(`to-spec`) 或手写 mini-spec
+- 执行：读并遵循 [to-spec/SKILL.md](to-spec/SKILL.md)；缺文件则手写 mini-spec
 - 产出：**先建** `<doc_root>/specs/YYYY-MM-DD-<feature>.md`（页面/路由、API 引用、组件、不在范围；技术细节只写 spec）
 - 推进：不问 → `spec:` + 阶段→3 → **立即步骤3**
 - 例外停顿：方案分歧 → 对比表+推荐，选定后再串联
@@ -157,7 +158,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 
 ### 步骤3: 拆分
 
-- 执行：Skill(`to-tickets`) 或手写票
+- 执行：读并遵循 [to-tickets/SKILL.md](to-tickets/SKILL.md)；缺文件则手写票
 - 产出：**先建** `<doc_root>/tickets/01-<slug>.md` …
 - 簿记不问：`tickets_root:` + `- [ ]`；**阶段仍为步骤3**
 - 🔴 编码前 CHECKPOINT（唯一闸）：展示 CONTEXT 要点 + spec 摘要（含不在范围）+ 票列表/依赖 → 用户确认 → 阶段→4
@@ -166,7 +167,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 
 ### 步骤4: 编码（自动挡终点）
 
-- 执行：Skill(`tdd`) 或 red-green / build 验证
+- 执行：读并遵循 [tdd/SKILL.md](tdd/SKILL.md)；缺文件则 red-green / build 验证
 - 前置：CHECKPOINT 已确认（阶段=步骤4）+ 产物完整性通过（结果写入当轮完整状态表）
 - 每票：确认测试缝 → 实现验证 → `[x]`（遵依赖）
 - 禁止自动 commit/push；全 `[x]` 且本轮无显式发布/归档意图时停住
@@ -206,7 +207,7 @@ grilling + domain-modeling 管追问，to-spec 管设计，to-tickets 管拆分�
 
 | 步骤 | 触发 | 修复 |
 |------|------|------|
-| 1 | 需求模糊 / 子 skill 不可用 | grilling 多轮 / 手搓，不中止 |
+| 1 | 需求模糊 / grilling 不可用 | grilling 多轮 / 手搓，不中止 |
 | 2 | 方案分歧 | 对比表+推荐；不选则最简方案记入 spec |
 | 3 | 票过大 | 再拆或标人工拆分 |
 | 4 | 测不出 | 记「build 验证」继续 |
