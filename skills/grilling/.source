@@ -1,0 +1,68 @@
+# Skill source tracking — mattpocock/skills vendored skills
+
+This file is the shared update-check manifest for every local skill vendored from
+https://github.com/mattpocock/skills. The check runs when the grilling skill is
+invoked (directly, or through /devflow), at most once per 7-day window.
+
+upstream_repo: https://github.com/mattpocock/skills
+upstream_releases_url: https://github.com/mattpocock/skills/releases
+upstream_latest_release_url: https://github.com/mattpocock/skills/releases/latest
+upstream_changelog_url: https://raw.githubusercontent.com/mattpocock/skills/main/CHANGELOG.md
+
+check_window_days: 7
+last_checked: never
+
+# Every vendored file tracked by this manifest. local body = the local SKILL.md with
+# any local-enhancement block (between the two comment markers) stripped.
+tracked_files:
+  grilling:
+    upstream_path: skills/productivity/grilling/SKILL.md
+    upstream_raw_url: https://raw.githubusercontent.com/mattpocock/skills/main/skills/productivity/grilling/SKILL.md
+    local_path: skills/grilling/SKILL.md
+    last_known_commit_sha: 86cba45f4244b2545112d13e77ba82eb2bfad325
+    last_known_commit_date: 2026-08-15
+    last_known_commit_message: Remove em-dashes from grilling skill
+  domain-modeling:
+    upstream_path: skills/engineering/domain-modeling/SKILL.md
+    upstream_raw_url: https://raw.githubusercontent.com/mattpocock/skills/main/skills/engineering/domain-modeling/SKILL.md
+    local_path: skills/devflow/domain-modeling/SKILL.md
+    last_known_commit_sha: unknown
+    last_known_commit_date: unknown
+    last_known_commit_message: unknown
+  tdd:
+    upstream_path: skills/engineering/tdd/SKILL.md
+    upstream_raw_url: https://raw.githubusercontent.com/mattpocock/skills/main/skills/engineering/tdd/SKILL.md
+    local_path: skills/devflow/tdd/SKILL.md
+    last_known_commit_sha: unknown
+    last_known_commit_date: unknown
+    last_known_commit_message: unknown
+  to-spec:
+    upstream_path: skills/engineering/to-spec/SKILL.md
+    upstream_raw_url: https://raw.githubusercontent.com/mattpocock/skills/main/skills/engineering/to-spec/SKILL.md
+    local_path: skills/devflow/to-spec/SKILL.md
+    last_known_commit_sha: unknown
+    last_known_commit_date: unknown
+    last_known_commit_message: unknown
+  to-tickets:
+    upstream_path: skills/engineering/to-tickets/SKILL.md
+    upstream_raw_url: https://raw.githubusercontent.com/mattpocock/skills/main/skills/engineering/to-tickets/SKILL.md
+    local_path: skills/devflow/to-tickets/SKILL.md
+    last_known_commit_sha: unknown
+    last_known_commit_date: unknown
+    last_known_commit_message: unknown
+
+# Check rule (for the agent reading this file):
+# If last_checked is "never" or (today - last_checked) >= 7 days, perform the check over
+# EVERY file in tracked_files. Otherwise skip the check entirely and proceed.
+#   1. For each tracked file: fetch its upstream_raw_url, read its local_path, strip the
+#      local-enhancement block (between the two comment markers) from the local file, and
+#      compare the remote content with the local upstream body, character for character.
+#   2. Update last_checked to today's date (YYYY-MM-DD) after the pass, regardless of results.
+#   3. For every file whose contents differ: do NOT just dump the diff. Fetch the official
+#      release notes / CHANGELOG (upstream_latest_release_url and/or upstream_changelog_url),
+#      find the changes that touch that skill, cross-check them against the actual content
+#      diff, and give the user a recommendation per skill: what the change means, whether
+#      it's worth updating, and any risks. Watch out for local customisations: if the local
+#      file was deliberately customised, say so and let the user decide. NEVER modify any
+#      SKILL.md without explicit user confirmation.
+#   4. If the check fails (network/API), skip it silently and proceed — never block the interview.
